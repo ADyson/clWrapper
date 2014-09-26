@@ -106,7 +106,7 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 {
 	cl_int status;
 
-	clKernel newKernel(this);
+	clKernel newKernel(*this,NumberOfArgs);
 
 	// denorms now flushed to zero, and no checks for NaNs or infs, should be faster...
 	const char options[] = "";// = "-cl-finite-math-only -cl-strict-aliasing -cl-mad-enable -cl-denorms-are-zero";
@@ -142,23 +142,19 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 		throw std::exception (error.c_str());
 	}
 
-	//newKernel.Context = this;
-	newKernel.NumberOfArgs = NumberOfArgs;
 	return newKernel;
 }
 
 clKernel clContext::BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs)
 {
-	clKernel newKernel(this);
-	//newKernel.Context = this;
-	newKernel.NumberOfArgs = NumberOfArgs;
+	clKernel newKernel(*this,NumberOfArgs);
 	return newKernel;
 }
 
 
 void clKernel::Enqueue(WorkGroup Global)
 {
-	status = clEnqueueNDRangeKernel(Context->queue,kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
+	status = clEnqueueNDRangeKernel(Context.queue,kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
 
 	if(!status==0)
 	{
@@ -166,16 +162,31 @@ void clKernel::Enqueue(WorkGroup Global)
 		std::string error = message;
 		throw std::exception (error.c_str());
 	}
+
+	RunCallbacks();
 }
 
 void clKernel::Enqueue(WorkGroup Global, WorkGroup Local)
 {
-	status = clEnqueueNDRangeKernel(Context->queue,kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
+	status = clEnqueueNDRangeKernel(Context.queue,kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
 
 	if(!status==0)
 	{
 		std::string message = "Problem with Kernel Enqueue";
 		std::string error = message;
 		throw std::exception (error.c_str());
+	}
+
+	RunCallbacks();
+}
+
+void clKernel::RunCallbacks()
+{
+	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
+	{
+		if(ArgType[arg] == Output || ArgType[arg] == InputOutput)
+		{
+			Callbacks[arg]->SetChanged();
+		}
 	}
 }
