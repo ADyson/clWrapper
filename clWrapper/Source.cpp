@@ -37,6 +37,7 @@ int main()
 	CPUKernel1.SetArg(1,1024);
 	CPUKernel1.SetArg(2,1);
 	CPUKernel1.SetArg(3,5.0f);
+	CPUKernel1.SetLocalMemoryArg<cl_float>(4,1024);
 	
 	CPUKernel1.Enqueue(Work);
 

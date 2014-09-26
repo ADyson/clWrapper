@@ -52,7 +52,8 @@ public:
 	cl_device_id deviceID;
 };
 
-class Notify
+// Based class to allow for callbacks to set Changed status....
+ class Notify abstract
 {
 public:
 	virtual void SetChanged(){};
@@ -110,6 +111,11 @@ public:
 		ArgType[position] = ArgumentType;
 		Callbacks[position] = &arg;
 		status |= clSetKernelArg(kernel,position,sizeof(cl_mem),&arg.Buffer);
+	}
+
+	template <class T> void SetLocalMemoryArg(int position, int size) 
+	{
+		status |= clSetKernelArg(kernel,position,size*sizeof(T),NULL);
 	}
 
 	// Run Kernel with just Global Work Size
