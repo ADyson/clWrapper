@@ -11,6 +11,9 @@ class clKernel;
 template <class T> class clMemory;
 
 
+// Optionally passed to argument setting.
+// Output types will be notified when data is modified via
+// Changed flag.
 enum ArgTypes
 	{
 		Input,
@@ -19,7 +22,7 @@ enum ArgTypes
 		Unspecified
 	};
 
-
+// Specifiy number of threads to launch
 class WorkGroup
 {
 public:
@@ -44,9 +47,14 @@ public:
 class clDevice
 {
 public:
+	clDevice(cl_device_id devID, int platNum, int devNum, std::string platName, std::string devName )
+		: deviceID(devID), deviceNum(devNum), platformNum(platNum), platformname(platName), devicename(devName){};
+
+	cl_device_id& GetDeviceID(){ return deviceID; };
+
+private:
 	int platformNum;
 	int deviceNum;
-	int numDevices;
 	std::string platformname;
 	std::string devicename;
 	cl_device_id deviceID;
@@ -63,28 +71,31 @@ public:
 class clContext
 {
 public:
-	cl_context context;
-	cl_command_queue queue;
-	clDevice contextdevice;
+	clContext(clDevice _ContextDevice, cl_context _Context, cl_command_queue _Queue)
+		: ContextDevice(_ContextDevice), Context(_Context), Queue(_Queue){};
+
+	cl_context Context;
+	cl_command_queue Queue;
+	clDevice ContextDevice;
 
 	void WaitForQueueFinish();
 
 	template<class T> clMemory<T> CreateBuffer(size_t size)
 	{
 		cl_int status;
-		clMemory<T> Mem(*this,size,clCreateBuffer(context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
+		clMemory<T> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
 	template<class T> clMemory<T> CreateBuffer(size_t size, cl_mem_flags flags)
 	{
 		cl_int status;
-		clMemory<T> Mem(*this,size,clCreateBuffer(context, flags, size*sizeof(T), 0, &status));
+		clMemory<T> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
 	clKernel BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);
-	clKernel BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs);
+	//clKernel BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs);
 };
 
 
@@ -92,7 +103,10 @@ public:
 class clKernel
 {
 public:
-	clKernel(clContext _context, int _NumberOfArgs) : Context(_context), NumberOfArgs(_NumberOfArgs)
+	int NumberOfArgs;
+
+	clKernel(clContext _context, int _NumberOfArgs, cl_kernel _kernel, cl_program _program, std::string _name)
+		: Context(_context), NumberOfArgs(_NumberOfArgs), Kernel(_kernel), Program(_program), Name(_name)
 	{
 		ArgType.resize(_NumberOfArgs);
 		Callbacks.resize(_NumberOfArgs);
@@ -102,7 +116,7 @@ public:
 	template <class T> void SetArg(int position, const T arg, ArgTypes ArgumentType = Unspecified)
 	{
 		ArgType[position] = ArgumentType;
-		status |= clSetKernelArg(kernel,position,sizeof(T),&arg);
+		status |= clSetKernelArg(Kernel,position,sizeof(T),&arg);
 	}
 
 	// Overload for OpenCL Memory Buffers
@@ -110,33 +124,27 @@ public:
 	{
 		ArgType[position] = ArgumentType;
 		Callbacks[position] = &arg;
-		status |= clSetKernelArg(kernel,position,sizeof(cl_mem),&arg.Buffer);
+		status |= clSetKernelArg(Kernel,position,sizeof(cl_mem),&arg.GetBuffer());
 	}
 
 	template <class T> void SetLocalMemoryArg(int position, int size) 
 	{
-		status |= clSetKernelArg(kernel,position,size*sizeof(T),NULL);
+		status |= clSetKernelArg(Kernel,position,size*sizeof(T),NULL);
 	}
 
-	// Run Kernel with just Global Work Size
-	void Enqueue(WorkGroup Global);
 
+	void Enqueue(WorkGroup Global);
 	void Enqueue(WorkGroup Global, WorkGroup Local);
 
-
-
-	int NumberOfArgs;
+private:
 	std::vector<ArgTypes> ArgType;
 	std::vector<Notify*> Callbacks;
-
-	const char* kernelcode;
-	cl_program kernelprogram;
-	cl_kernel kernel;
-	std::string kernelname;
-	cl_int status;
-	size_t log;
 	clContext Context;
-private:
+	cl_program Program;
+	cl_kernel Kernel;
+	std::string Name;
+	cl_int status;
+
 	void RunCallbacks();
 };
 
@@ -145,20 +153,16 @@ template <class T>
 class clMemory : public Notify
 {
 public:
-	clContext Context;
 	typedef T MemType;
+	bool Changed;
+
+	cl_mem& GetBuffer(){ return Buffer; };
+	size_t	GetSize(){ return Size; };
 
 	clMemory<T>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size)
 	{
 		Changed = false;
 	};
-
-	cl_mem Buffer;
-	size_t Size;
-	bool Changed;
-
-	// Currently not used
-	std::vector<T> LocalData;
 
 	void SetChanged()
 	{
@@ -167,15 +171,20 @@ public:
 	
 	void clMemory<T>::Read(std::vector<T> &data)
 	{
-			clEnqueueReadBuffer(Context.queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
+			clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
 			Changed = false;
 	};
 
 	void clMemory<T>::Write(std::vector<T> &data)
 	{
-		clEnqueueWriteBuffer(Context.queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
+		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
 		Changed = false;
 	};
+
+private:
+	cl_mem Buffer;
+	size_t Size;
+	clContext Context;
 };
 
 

@@ -53,22 +53,16 @@ std::vector<clDevice> OpenCL::GetDeviceList()
         // for each device get and store name, platform, and device number
         for (int j = 0; j < DevPerPlatform[i]; j++) 
 		{
-			clDevice newDev;
+			
 
 			// get device name
 			status =    clGetDeviceInfo(devices[i][j], CL_DEVICE_NAME, 0, NULL, &valueSize);
             value = (char*) malloc(valueSize);
 			status =  clGetDeviceInfo(devices[i][j], CL_DEVICE_NAME, valueSize, value, NULL);
 			std::string dName = value;
-
-			newDev.deviceID = devices[i][j];
-			newDev.deviceNum = j;
-			newDev.platformNum = i;
-			//newDev.devicename = std::to_string(i) + ": " + trim(pName) + ", " + std::to_string(j) + ": " + trim(dName);
-			newDev.devicename = trim(pName) + ", "  + trim(dName);
-			newDev.numDevices = DevPerPlatform[i];
-            free(value);
-
+			free(value);
+			
+			clDevice newDev(devices[i][j],i,j,pName,trim(dName));         
 			DeviceList.push_back(newDev);
 		}
 		free(Pvalue);
@@ -82,12 +76,11 @@ std::vector<clDevice> OpenCL::GetDeviceList()
 
 clContext OpenCL::MakeContext(clDevice& dev)
 {
-	clContext Context;
 	cl_int status;
+	cl_context ctx = clCreateContext(NULL,1,&dev.GetDeviceID(),NULL,NULL,&status);
+	cl_command_queue q = clCreateCommandQueue(ctx,dev.GetDeviceID(),0,&status);
 
-	Context.context = clCreateContext(NULL,1,&dev.deviceID,NULL,NULL,&status);
-	Context.queue = clCreateCommandQueue(Context.context,dev.deviceID,0,&status);
-	Context.contextdevice = dev;
+	clContext Context(dev,ctx,q);
 
 	if(status!=CL_SUCCESS)
 	{
@@ -99,31 +92,31 @@ clContext OpenCL::MakeContext(clDevice& dev)
 
 void clContext::WaitForQueueFinish()
 {
-	clFinish(queue);
+	clFinish(Queue);
 }
 
 clKernel clContext::BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs)
 {
 	cl_int status;
-
-	clKernel newKernel(*this,NumberOfArgs);
+	size_t log;
+	cl_program Program;
+	cl_kernel Kernel;
 
 	// denorms now flushed to zero, and no checks for NaNs or infs, should be faster...
 	const char options[] = "";// = "-cl-finite-math-only -cl-strict-aliasing -cl-mad-enable -cl-denorms-are-zero";
 	
-	newKernel.kernelprogram = clCreateProgramWithSource(context,1,&codestring,NULL,&status);
+	Program = clCreateProgramWithSource(Context,1,&codestring,NULL,&status);
 
 	if(!status==0)
 	{
 		throw std::exception ("Problem with Kernel Source");
 	}
 
-	status = clBuildProgram(newKernel.kernelprogram,1,&contextdevice.deviceID,options,NULL,NULL);
+	status = clBuildProgram(Program,1,&ContextDevice.GetDeviceID(),options,NULL,NULL);
+	status = clGetProgramBuildInfo(Program,ContextDevice.GetDeviceID(), CL_PROGRAM_BUILD_LOG, 0, NULL, &log);
 
-	status = clGetProgramBuildInfo(newKernel.kernelprogram,contextdevice.deviceID, CL_PROGRAM_BUILD_LOG, 0, NULL, &newKernel.log);
-
-	char *buildlog = (char*)malloc(newKernel.log*sizeof(char));
-	status = clGetProgramBuildInfo(newKernel.kernelprogram, contextdevice.deviceID, CL_PROGRAM_BUILD_LOG, newKernel.log, buildlog, NULL);
+	char *buildlog = (char*)malloc(log*sizeof(char));
+	status = clGetProgramBuildInfo(Program, ContextDevice.GetDeviceID(), CL_PROGRAM_BUILD_LOG, log, buildlog, NULL);
 
 	if(!status==0)
 	{
@@ -133,7 +126,7 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 
 	free(buildlog);
 
-	newKernel.kernel = clCreateKernel(newKernel.kernelprogram,kernelname.c_str(),&status);
+	Kernel = clCreateKernel(Program,kernelname.c_str(),&status);
 
 	if(!status==0)
 	{
@@ -142,19 +135,22 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 		throw std::exception (error.c_str());
 	}
 
+	clKernel newKernel(*this,NumberOfArgs,Kernel,Program,kernelname);
 	return newKernel;
 }
 
-clKernel clContext::BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs)
+// Not implemented yet
+/* clKernel clContext::BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs)
 {
 	clKernel newKernel(*this,NumberOfArgs);
 	return newKernel;
-}
+} 
+*/
 
 
 void clKernel::Enqueue(WorkGroup Global)
 {
-	status = clEnqueueNDRangeKernel(Context.queue,kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
+	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
 
 	if(!status==0)
 	{
@@ -168,7 +164,7 @@ void clKernel::Enqueue(WorkGroup Global)
 
 void clKernel::Enqueue(WorkGroup Global, WorkGroup Local)
 {
-	status = clEnqueueNDRangeKernel(Context.queue,kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
+	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
 
 	if(!status==0)
 	{
