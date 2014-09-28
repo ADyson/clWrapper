@@ -27,8 +27,12 @@ int main()
 	clContext GPUContext = cl.MakeContext(DeviceList[0]);
 	clContext CPUContext = cl.MakeContext(DeviceList[1]);
 
-	clMemory<float> GPUBuffer = GPUContext.CreateBuffer<float>(1024);
-	clMemory<float> CPUBuffer = CPUContext.CreateBuffer<float>(1024);
+	clMemory<float,Auto> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
+	clMemory<float,Auto> CPUBuffer = CPUContext.CreateBuffer<float,Auto>(1024);
+
+	GPUBuffer.SetLocal(test2);
+	CPUBuffer.SetLocal(test);
+
 
 	clKernel CPUKernel = CPUContext.BuildKernelFromString(TestSource,"clTest",4);
 	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
@@ -43,15 +47,17 @@ int main()
 	CPUKernel.SetArg(0,CPUBuffer,InputOutput);
 	CPUKernel.SetArg(1,1024);
 	CPUKernel.SetArg(2,1);
-	CPUKernel.SetArg(3,5.0f);
+	CPUKernel.SetArg(3,7.0f);
 	
 	//GPUKernel.SetLocalMemoryArg<cl_float>(4,1024);
 
 	GPUKernel(Work);
 	CPUKernel(Work);
 
-	CPUBuffer.Read(test);
-	GPUBuffer.Read(test2);
+	
+	// Made Auto
+	//CPUBuffer.Read(test);
+	//GPUBuffer.Read(test2);
 
 	GPUContext.WaitForQueueFinish();
 	CPUContext.WaitForQueueFinish();

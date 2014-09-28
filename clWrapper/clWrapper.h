@@ -8,8 +8,11 @@
 class clContext;
 class clDevice;
 class clKernel;
-template <class T> class clMemory;
-template <class T> class clMemoryImpl;
+
+template <class T> class Auto;
+template <class T> class Manual;
+template <class T, template <class> class AutoPolicy> class clMemory;
+template <class T, template <class> class AutoPolicy> class clMemoryImpl;
 
 
 // Optionally passed to argument setting.
@@ -80,17 +83,24 @@ public:
 	clDevice ContextDevice;
 	void WaitForQueueFinish();
 
-	template<class T> clMemoryImpl<T> CreateBuffer(size_t size)
+	// IMPORTANT - we can return as clMemory instead of clMemoryImpl, this allows us to use auto.
+	// it will get automatically converted to the correct type anyway
+	// however it is possible that without RVO the conversion could happen and then be copied 
+	// causing destructor to deallocate memory...
+	
+	// Cant use default template arguments for vs2008 :(
+
+	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
 	{
 		cl_int status;
-		clMemoryImpl<T> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
-	template<class T> clMemoryImpl<T> CreateBuffer(size_t size, cl_mem_flags flags)
+	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, cl_mem_flags flags)
 	{
 		cl_int status;
-		clMemoryImpl<T> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
@@ -120,7 +130,7 @@ public:
 	}
 
 	// Overload for OpenCL Memory Buffers
-	template <class T> void SetArg(int position, clMemory<T>& arg, ArgTypes ArgumentType = Unspecified)
+	template <class T, template <class> class AutoPolicy> void SetArg(int position, clMemory<T,AutoPolicy>& arg, ArgTypes ArgumentType = Unspecified)
 	{
 		ArgType[position] = ArgumentType;
 		Callbacks[position] = &arg;
@@ -150,6 +160,39 @@ private:
 	void RunCallbacks();
 };
 
+template <class T> class Auto
+{
+public:
+	Auto<T>(): LocalData(NULL), isAuto(false){};
+	T* LocalData;
+
+	// Maybe check size matches...
+	void SetLocal(std::vector<T>& local)
+	{
+		LocalData = &local[0];
+		isAuto=true;
+	};
+
+	bool isAuto;
+
+	T* GetLocal()
+	{
+		return LocalData;
+	};
+};
+
+template <class T> class Manual
+{
+public:
+	Manual<T>(): isAuto(false){};
+	bool isAuto;
+
+	T* GetLocal()
+	{
+		return NULL;
+	};
+};
+
 // Memory is split into a base and derived class.
 // The derived class will free memory when it is destroyed, the base class doesn't
 // The base class can only be constructed using the factory (clContext).
@@ -157,12 +200,12 @@ private:
 // This allows for memory to be passed by value from factory without being deallocated, but
 // when out of scope using derived class, it will be deallocated.
 
-template <class T>
-class clMemoryImpl : public Notify
+template <class T, template <class> class AutoPolicy>
+class clMemoryImpl : public Notify,public AutoPolicy<T>
 {
 public:
 	friend class clContext;
-	friend class clMemory<T>;
+	friend class clMemory<T,AutoPolicy>;
 	typedef T MemType;
 	bool Changed;
 	cl_mem& GetBuffer(){ return Buffer; };
@@ -171,11 +214,22 @@ public:
 	void SetChanged()
 	{
 		Changed = true;
+
+		if(AutoPolicy<T>::isAuto)
+		{
+			Read(AutoPolicy<T>::GetLocal());
+		}
 	}
 	
 	void Read(std::vector<T> &data)
 	{
 		clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
+		Changed = false;
+	};
+
+	void Read(T* data)
+	{
+		clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,Size*sizeof(T),data,0,NULL,NULL);
 		Changed = false;
 	};
 
@@ -188,12 +242,12 @@ public:
 
 private:
 	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
-	clMemoryImpl<T>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size)
+	clMemoryImpl<T,AutoPolicy>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size)
 	{
 		Changed = false;
 	};
 
-	clMemoryImpl<T>(const clMemoryImpl& RHS) : clMemoryImpl<T>(RHS.Context,RHS.Size,RHS.Buffer)
+	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : clMemoryImpl<T,AutoPolicy>(RHS.Context,RHS.Size,RHS.Buffer)
 	{
 		Changed=RHS.Changed;
 	};
@@ -209,11 +263,11 @@ private:
 };
 
 // This type automatically destroys memory, can only be constructed from a clMemory.
-template <class T> class clMemory: public clMemoryImpl<T>
+template <class T, template <class> class AutoPolicy = Manual > class clMemory: public clMemoryImpl<T,AutoPolicy>
 {
 public:
-	clMemory<T>(const clMemoryImpl<T>& factory) : clMemoryImpl<T>(factory){};
-	~clMemory<T>(){ Release(); };
+	clMemory<T,AutoPolicy>(const clMemoryImpl<T,AutoPolicy>& factory) : clMemoryImpl<T,AutoPolicy>(factory){};
+	~clMemory<T,AutoPolicy>(){ Release(); };
 };
 
 
