@@ -176,6 +176,34 @@ void clKernel::Enqueue(WorkGroup Global, WorkGroup Local)
 	RunCallbacks();
 }
 
+void clKernel::operator()(WorkGroup Global)
+{
+	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
+
+	if(!status==0)
+	{
+		std::string message = "Problem with Kernel Enqueue";
+		std::string error = message;
+		throw std::exception (error.c_str());
+	}
+
+	RunCallbacks();
+}
+
+void clKernel::operator()(WorkGroup Global, WorkGroup Local)
+{
+	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
+
+	if(!status==0)
+	{
+		std::string message = "Problem with Kernel Enqueue";
+		std::string error = message;
+		throw std::exception (error.c_str());
+	}
+
+	RunCallbacks();
+}
+
 void clKernel::RunCallbacks()
 {
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
@@ -186,3 +214,5 @@ void clKernel::RunCallbacks()
 		}
 	}
 }
+
+

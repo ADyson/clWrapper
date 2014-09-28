@@ -9,6 +9,7 @@ class clContext;
 class clDevice;
 class clKernel;
 template <class T> class clMemory;
+template <class T> class clMemoryImpl;
 
 
 // Optionally passed to argument setting.
@@ -61,10 +62,10 @@ private:
 };
 
 // Based class to allow for callbacks to set Changed status....
- class Notify abstract
+class Notify abstract
 {
 public:
-	virtual void SetChanged(){};
+virtual void SetChanged(){};
 };
 
 
@@ -77,20 +78,19 @@ public:
 	cl_context Context;
 	cl_command_queue Queue;
 	clDevice ContextDevice;
-
 	void WaitForQueueFinish();
 
-	template<class T> clMemory<T> CreateBuffer(size_t size)
+	template<class T> clMemoryImpl<T> CreateBuffer(size_t size)
 	{
 		cl_int status;
-		clMemory<T> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
+		clMemoryImpl<T> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
-	template<class T> clMemory<T> CreateBuffer(size_t size, cl_mem_flags flags)
+	template<class T> clMemoryImpl<T> CreateBuffer(size_t size, cl_mem_flags flags)
 	{
 		cl_int status;
-		clMemory<T> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
+		clMemoryImpl<T> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
@@ -135,6 +135,8 @@ public:
 
 	void Enqueue(WorkGroup Global);
 	void Enqueue(WorkGroup Global, WorkGroup Local);
+	void operator()(WorkGroup Global);
+	void operator()(WorkGroup Global, WorkGroup Local);
 
 private:
 	std::vector<ArgTypes> ArgType;
@@ -148,45 +150,71 @@ private:
 	void RunCallbacks();
 };
 
-// Shallow copy is OK
+// Memory is split into a base and derived class.
+// The derived class will free memory when it is destroyed, the base class doesn't
+// The base class can only be constructed using the factory (clContext).
+// Variables can only be created of the derived type using copy construction from base class.
+// This allows for memory to be passed by value from factory without being deallocated, but
+// when out of scope using derived class, it will be deallocated.
+
 template <class T>
-class clMemory : public Notify
+class clMemoryImpl : public Notify
 {
 public:
+	friend class clContext;
+	friend class clMemory<T>;
 	typedef T MemType;
 	bool Changed;
-
 	cl_mem& GetBuffer(){ return Buffer; };
-	size_t	GetSize(){ return Size; };
-
-	clMemory<T>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size)
-	{
-		Changed = false;
-	};
+	size_t	GetSize(){ return Size*sizeof(MemType); };
 
 	void SetChanged()
 	{
 		Changed = true;
 	}
 	
-	void clMemory<T>::Read(std::vector<T> &data)
+	void Read(std::vector<T> &data)
 	{
-			clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
-			Changed = false;
+		clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
+		Changed = false;
 	};
 
-	void clMemory<T>::Write(std::vector<T> &data)
+	void Write(std::vector<T> &data)
 	{
 		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
 		Changed = false;
 	};
 
+
 private:
+	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
+	clMemoryImpl<T>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size)
+	{
+		Changed = false;
+	};
+
+	clMemoryImpl<T>(const clMemoryImpl& RHS) : clMemoryImpl<T>(RHS.Context,RHS.Size,RHS.Buffer)
+	{
+		Changed=RHS.Changed;
+	};
+
+	void Release()
+	{
+		clReleaseMemObject(Buffer);
+	};
+
 	cl_mem Buffer;
 	size_t Size;
 	clContext Context;
 };
 
+// This type automatically destroys memory, can only be constructed from a clMemory.
+template <class T> class clMemory: public clMemoryImpl<T>
+{
+public:
+	clMemory<T>(const clMemoryImpl<T>& factory) : clMemoryImpl<T>(factory){};
+	~clMemory<T>(){ Release(); };
+};
 
 
 class OpenCL
