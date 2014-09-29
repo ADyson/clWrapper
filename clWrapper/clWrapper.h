@@ -11,7 +11,6 @@
 class clContext;
 class clDevice;
 class clKernel;
-
 template <class T> class Auto;
 template <class T> class Manual;
 template <class T, template <class> class AutoPolicy> class clMemory;
@@ -19,13 +18,21 @@ template <class T, template <class> class AutoPolicy> class clMemoryImpl;
 
 
 // Optionally passed to argument setting.
-// Output types will be notified when data is modified
+// Output types will be updated automatically when data is modified
 enum ArgTypes
 	{
 		Input,
 		Output,
 		InputOutput,
 		Unspecified
+	};
+
+// Used to specify buffers that can be read or write only during creation.
+enum MemoryFlags
+	{
+		ReadWrite = CL_MEM_READ_WRITE,
+		ReadOnly = CL_MEM_READ_ONLY,
+		WriteOnly = CL_MEM_WRITE_ONLY
 	};
 
 // Specifiy number of threads to launch
@@ -49,7 +56,7 @@ public:
 	size_t worksize[3];
 };
 
-
+// Wrapper for OpenCL devices, used to construct a context
 class clDevice
 {
 public:
@@ -73,7 +80,8 @@ public:
 virtual void Update(){};
 };
 
-
+// Wrapper for OpenCL context, used to create kernels and memory buffers
+// Can make a different context for different devices
 class clContext
 {
 public:
@@ -95,11 +103,11 @@ public:
 	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
 	{
 		cl_int status;
-		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
-	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, cl_mem_flags flags)
+	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, enum MemoryFlags flags)
 	{
 		cl_int status;
 		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
@@ -111,11 +119,11 @@ public:
 	template<class T,template <class> class AutoPolicy> clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
 	{
 		cl_int status;
-		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &status));
 		return Mem;
 	};
 
-	template<class T,template <class> class AutoPolicy > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, cl_mem_flags flags)
+	template<class T,template <class> class AutoPolicy > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, enum MemoryFlags flags)
 	{
 		cl_int status;
 		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
@@ -127,8 +135,7 @@ public:
 	//clKernel BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs);
 };
 
-
-
+// Wrapper for individual kernel objects
 class clKernel
 {
 public:
@@ -253,7 +260,6 @@ public:
 		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
 	};
 
-
 private:
 	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
 	clMemoryImpl<T,AutoPolicy>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){};
@@ -277,7 +283,6 @@ public:
 	~clMemory<T,AutoPolicy>(){ Release(); };
 };
 
-
 class OpenCL
 {
 public:
@@ -285,5 +290,5 @@ public:
 	//~OpenCL(void);
 	std::vector<clDevice> GetDeviceList();
 	clContext MakeContext(clDevice& dev);
-
 };
+

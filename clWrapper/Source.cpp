@@ -16,8 +16,6 @@ const char* TestSource =
 
 int main()
 {
-
-
 	OpenCL cl;
 
 	std::vector<clDevice> DeviceList = cl.GetDeviceList();
@@ -26,8 +24,8 @@ int main()
 
 	clMemory<float,Auto> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024*1024);
 	
-	// Template defaults to Manual (in C++11)
-	clMemory<float> CPUBuffer = CPUContext.CreateBuffer<float>(1024*1024);
+	// Template defaults to Manual (in C++11), can optionally specify memory flags
+	clMemory<float> CPUBuffer = CPUContext.CreateBuffer<float>(1024*1024,ReadWrite);
 
 	clKernel CPUKernel = CPUContext.BuildKernelFromString(TestSource,"clTest",4);
 	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
@@ -44,6 +42,7 @@ int main()
 	CPUKernel.SetArg(2,1024);
 	CPUKernel.SetArg(3,7.0f);
 	
+	// How to set a local memory argument.
 	//GPUKernel.SetLocalMemoryArg<cl_float>(4,1024);
 
 	// Launch kernels.
