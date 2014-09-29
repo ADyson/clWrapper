@@ -1,9 +1,12 @@
 // Factory object used to produce devices and queues for OpenCL operation.
 #include <string>
 #include <vector>
-#include <stdlib.h>
 #include <memory>
+#include <stdlib.h>
 #include "CL/OpenCl.h"
+
+// Use templates with default arguments.
+#define clWrapper11
 
 class clContext;
 class clDevice;
@@ -16,8 +19,7 @@ template <class T, template <class> class AutoPolicy> class clMemoryImpl;
 
 
 // Optionally passed to argument setting.
-// Output types will be notified when data is modified via
-// Changed flag.
+// Output types will be notified when data is modified
 enum ArgTypes
 	{
 		Input,
@@ -64,11 +66,11 @@ private:
 	cl_device_id deviceID;
 };
 
-// Based class to allow for callbacks to set Changed status....
+// Based class to allow for callbacks..
 class Notify abstract
 {
 public:
-virtual void SetChanged(){};
+virtual void Update(){};
 };
 
 
@@ -88,8 +90,8 @@ public:
 	// however it is possible that without RVO the conversion could happen and then be copied 
 	// causing destructor to deallocate memory...
 	
-	// Cant use default template arguments for vs2008 :(
-
+	// Use default template arguments for template functions only with c++11 or later.
+#ifdef clWrapper11
 	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
 	{
 		cl_int status;
@@ -103,6 +105,23 @@ public:
 		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
 		return Mem;
 	};
+#endif
+
+#ifndef clWrapper11
+	template<class T,template <class> class AutoPolicy> clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
+	{
+		cl_int status;
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, CL_MEM_READ_WRITE, size*sizeof(T), 0, &status));
+		return Mem;
+	};
+
+	template<class T,template <class> class AutoPolicy > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, cl_mem_flags flags)
+	{
+		cl_int status;
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
+		return Mem;
+	};
+#endif
 
 	clKernel BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);
 	//clKernel BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs);
@@ -142,7 +161,6 @@ public:
 		status |= clSetKernelArg(Kernel,position,size*sizeof(T),NULL);
 	}
 
-
 	void Enqueue(WorkGroup Global);
 	void Enqueue(WorkGroup Global, WorkGroup Local);
 	void operator()(WorkGroup Global);
@@ -160,36 +178,48 @@ private:
 	void RunCallbacks();
 };
 
-template <class T> class Auto
+// This class can facilitate automatically retrieving changes to OpenCL memory buffers.
+// from kernels with argument types specified.
+template <class T> class Auto abstract : public Notify
 {
 public:
-	Auto<T>(): LocalData(NULL), isAuto(false){};
-	T* LocalData;
+	Auto<T>(size_t size): Size(size), isAuto(true){};
 
-	// Maybe check size matches...
-	void SetLocal(std::vector<T>& local)
-	{
-		LocalData = &local[0];
-		isAuto=true;
-	};
-
+	size_t Size;
 	bool isAuto;
-
-	T* GetLocal()
+	std::vector<T> Local;
+	
+	std::vector<T>& GetLocal()
 	{
-		return LocalData;
+		return Local;
 	};
+
+	virtual void Read(std::vector<T>&data){};
+
+	void Update()
+	{
+		if(Local.empty() == true || Local.size() != Size)
+			Local.resize(Size);
+		Read(Local);
+	}
 };
 
-template <class T> class Manual
+// This class is inherited by OpenCL memory buffers that have to manage there own memory lifetimes.
+template <class T> class Manual abstract : public Notify
 {
 public:
-	Manual<T>(): isAuto(false){};
-	bool isAuto;
+	Manual<T>(size_t size): Size(size), isAuto(false) {};
+	const bool isAuto;
+	size_t Size;
+	void Update(){};
 
-	T* GetLocal()
+	virtual void Read(std::vector<T>&data){};
+
+	std::vector<T> CreateLocalCopy()
 	{
-		return NULL;
+		std::vector<T> Local(Size);
+		Read(Local);
+		return Local;
 	};
 };
 
@@ -201,56 +231,33 @@ public:
 // when out of scope using derived class, it will be deallocated.
 
 template <class T, template <class> class AutoPolicy>
-class clMemoryImpl : public Notify,public AutoPolicy<T>
+class clMemoryImpl : public AutoPolicy<T>
 {
 public:
 	friend class clContext;
 	friend class clMemory<T,AutoPolicy>;
 	typedef T MemType;
-	bool Changed;
 	cl_mem& GetBuffer(){ return Buffer; };
 	size_t	GetSize(){ return Size*sizeof(MemType); };
 
-	void SetChanged()
-	{
-		Changed = true;
+	// Called whenever this buffer is used as an Output type in an enqueued Kernel.
 
-		if(AutoPolicy<T>::isAuto)
-		{
-			Read(AutoPolicy<T>::GetLocal());
-		}
-	}
 	
 	void Read(std::vector<T> &data)
 	{
 		clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
-		Changed = false;
-	};
-
-	void Read(T* data)
-	{
-		clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,Size*sizeof(T),data,0,NULL,NULL);
-		Changed = false;
 	};
 
 	void Write(std::vector<T> &data)
 	{
 		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
-		Changed = false;
 	};
 
 
 private:
 	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
-	clMemoryImpl<T,AutoPolicy>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size)
-	{
-		Changed = false;
-	};
-
-	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : clMemoryImpl<T,AutoPolicy>(RHS.Context,RHS.Size,RHS.Buffer)
-	{
-		Changed=RHS.Changed;
-	};
+	clMemoryImpl<T,AutoPolicy>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){};
+	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : clMemoryImpl<T,AutoPolicy>(RHS.Context,RHS.Size,RHS.Buffer){};
 
 	void Release()
 	{
@@ -266,7 +273,7 @@ private:
 template <class T, template <class> class AutoPolicy = Manual > class clMemory: public clMemoryImpl<T,AutoPolicy>
 {
 public:
-	clMemory<T,AutoPolicy>(const clMemoryImpl<T,AutoPolicy>& factory) : clMemoryImpl<T,AutoPolicy>(factory){};
+	clMemory<T,AutoPolicy>(const clMemoryImpl<T,AutoPolicy>& BaseType) : clMemoryImpl<T,AutoPolicy>(BaseType){};
 	~clMemory<T,AutoPolicy>(){ Release(); };
 };
 

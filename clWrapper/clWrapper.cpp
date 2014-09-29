@@ -210,7 +210,7 @@ void clKernel::RunCallbacks()
 	{
 		if(ArgType[arg] == Output || ArgType[arg] == InputOutput)
 		{
-			Callbacks[arg]->SetChanged();
+			Callbacks[arg]->Update();
 		}
 	}
 }

@@ -16,10 +16,7 @@ const char* TestSource =
 
 int main()
 {
-	std::vector<float> test;
-	test.resize(1024);
-	std::vector<float> test2;
-	test2.resize(1024);
+
 
 	OpenCL cl;
 
@@ -27,37 +24,34 @@ int main()
 	clContext GPUContext = cl.MakeContext(DeviceList[0]);
 	clContext CPUContext = cl.MakeContext(DeviceList[1]);
 
-	clMemory<float,Auto> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
-	clMemory<float,Auto> CPUBuffer = CPUContext.CreateBuffer<float,Auto>(1024);
-
-	GPUBuffer.SetLocal(test2);
-	CPUBuffer.SetLocal(test);
-
+	clMemory<float,Auto> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024*1024);
+	
+	// Template defaults to Manual (in C++11)
+	clMemory<float> CPUBuffer = CPUContext.CreateBuffer<float>(1024*1024);
 
 	clKernel CPUKernel = CPUContext.BuildKernelFromString(TestSource,"clTest",4);
 	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
 
-	WorkGroup Work(1024,1,1);
+	WorkGroup Work(1024,1024,1);
 
 	GPUKernel.SetArg(0,GPUBuffer,InputOutput);
 	GPUKernel.SetArg(1,1024);
-	GPUKernel.SetArg(2,1);
+	GPUKernel.SetArg(2,1024);
 	GPUKernel.SetArg(3,5.0f);
 
 	CPUKernel.SetArg(0,CPUBuffer,InputOutput);
 	CPUKernel.SetArg(1,1024);
-	CPUKernel.SetArg(2,1);
+	CPUKernel.SetArg(2,1024);
 	CPUKernel.SetArg(3,7.0f);
 	
 	//GPUKernel.SetLocalMemoryArg<cl_float>(4,1024);
 
+	// Launch kernels.
 	GPUKernel(Work);
 	CPUKernel(Work);
-
 	
-	// Made Auto
-	//CPUBuffer.Read(test);
-	//GPUBuffer.Read(test2);
+	// Manual reading into a vector
+	std::vector<float> CPUResult = CPUBuffer.CreateLocalCopy();
 
 	GPUContext.WaitForQueueFinish();
 	CPUContext.WaitForQueueFinish();
