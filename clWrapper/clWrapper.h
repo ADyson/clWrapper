@@ -6,7 +6,7 @@
 #include "CL/OpenCl.h"
 
 // Use templates with default arguments.
-#define clWrapper11
+//#define clWrapper11
 
 class clContext;
 class clDevice;
@@ -263,7 +263,7 @@ public:
 private:
 	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
 	clMemoryImpl<T,AutoPolicy>(clContext context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){};
-	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : clMemoryImpl<T,AutoPolicy>(RHS.Context,RHS.Size,RHS.Buffer){};
+	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size){};
 
 	void Release()
 	{

@@ -25,7 +25,7 @@ int main()
 	clMemory<float,Auto> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024*1024);
 	
 	// Template defaults to Manual (in C++11), can optionally specify memory flags
-	clMemory<float> CPUBuffer = CPUContext.CreateBuffer<float>(1024*1024,ReadWrite);
+	clMemory<float,Manual> CPUBuffer = CPUContext.CreateBuffer<float,Manual>(1024*1024,ReadWrite);
 
 	clKernel CPUKernel = CPUContext.BuildKernelFromString(TestSource,"clTest",4);
 	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
