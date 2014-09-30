@@ -104,6 +104,7 @@ public:
 
 	cl_context Context;
 	cl_command_queue Queue;
+	cl_int Status;
 
 	clDevice ContextDevice;
 	void WaitForQueueFinish();
@@ -119,15 +120,13 @@ public:
 #ifdef clWrapper11
 	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
 	{
-		cl_int status;
-		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status));
 		return Mem;
 	};
 
 	template<class T,template <class> class AutoPolicy = Manual > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, enum MemoryFlags flags)
 	{
-		cl_int status;
-		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status));
 		return Mem;
 	};
 #endif
@@ -135,15 +134,13 @@ public:
 #ifndef clWrapper11
 	template<class T,template <class> class AutoPolicy> clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size)
 	{
-		cl_int status;
-		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status));
 		return Mem;
 	};
 
 	template<class T,template <class> class AutoPolicy > clMemoryImpl<T,AutoPolicy> CreateBuffer(size_t size, enum MemoryFlags flags)
 	{
-		cl_int status;
-		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &status));
+		clMemoryImpl<T,AutoPolicy> Mem(*this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status));
 		return Mem;
 	};
 #endif
