@@ -230,15 +230,22 @@ public:
 
 	size_t Size;
 	bool isAuto;
+
+	// Reading directly from Local is unadvised as it will be updated whenever the kernel 
+	// actually completes which is not in general, directly after it has been called as kernel
+	// enqueue is non blocking. Use GetLocal() to force waiting for current version.
 	std::vector<T> Local;
 
 	virtual clEvent Read(std::vector<T>&data)=0;
 	virtual clEvent Read(std::vector<T>&data,clEvent KernelFinished)=0;
+	
 	virtual clEvent GetStartWriteEvent()=0;
 	virtual clEvent GetStartReadEvent()=0;
 	virtual clEvent GetFinishedWriteEvent()=0;
 	virtual clEvent GetFinishedReadEvent()=0;
 	
+	// This call will block if the Memory is currently waiting on
+	// an event before updating itself.
 	std::vector<T>& GetLocal()
 	{	
 		cl_event e = GetStartReadEvent().event;
@@ -246,7 +253,8 @@ public:
 		return Local;
 	};
 
-
+	// Called by clKernel for Output types to generate automatic
+	// memory updates (non blocking)
 	void Update(clEvent KernelFinished)
 	{
 		if(Local.empty() == true || Local.size() != Size)
@@ -272,13 +280,21 @@ public:
 	virtual clEvent GetFinishedWriteEvent()=0;
 	virtual clEvent GetFinishedReadEvent()=0;
 
+	// This will create a vector filled with the current contents of the memory
+	// Will block until the read has been completed
 	std::vector<T> CreateLocalCopy()
 	{
 		std::vector<T> Local(Size);
 		if(KernelFinished.event!=NULL)
-			Read(Local,KernelFinished);
+		{
+			clEvent e =	Read(Local,KernelFinished);
+			clWaitForEvents(1,&e.event);
+		}
 		else
-			Read(Local);
+		{
+			clEvent e =Read(Local);
+			clWaitForEvents(1,&e.event);
+		}
 		return Local;
 	};
 };
