@@ -78,9 +78,26 @@ clContext OpenCL::MakeContext(clDevice& dev)
 {
 	cl_int status;
 	cl_context ctx = clCreateContext(NULL,1,&dev.GetDeviceID(),NULL,NULL,&status);
-	cl_command_queue q = clCreateCommandQueue(ctx,dev.GetDeviceID(),0,&status);
+	cl_command_queue q = clCreateCommandQueue(ctx,dev.GetDeviceID(),CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,&status);
 
 	clContext Context(dev,ctx,q);
+
+	if(status!=CL_SUCCESS)
+	{
+		throw "OpenCL Error setting device/platform";
+	}
+
+	return Context;
+}
+
+clDoubleQueueContext OpenCL::MakeDoubleQueueContext(clDevice& dev)
+{
+	cl_int status;
+	cl_context ctx = clCreateContext(NULL,1,&dev.GetDeviceID(),NULL,NULL,&status);
+	cl_command_queue q = clCreateCommandQueue(ctx,dev.GetDeviceID(),CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,&status);
+	cl_command_queue IOq = clCreateCommandQueue(ctx,dev.GetDeviceID(),CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,&status);
+	
+	clDoubleQueueContext Context(dev,ctx,q,IOq);
 
 	if(status!=CL_SUCCESS)
 	{
@@ -93,6 +110,21 @@ clContext OpenCL::MakeContext(clDevice& dev)
 void clContext::WaitForQueueFinish()
 {
 	clFinish(Queue);
+}
+
+void clContext::QueueFlush()
+{
+	clFlush(Queue);
+}
+
+void clDoubleQueueContext::WaitForIOQueueFinish()
+{
+	clFinish(IOQueue);
+}
+
+void clDoubleQueueContext::IOQueueFlush()
+{
+	clFlush(IOQueue);
 }
 
 clKernel clContext::BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs)
@@ -109,7 +141,7 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 
 	if(!status==0)
 	{
-		throw std::exception ("Problem with Kernel Source");
+		throw clKernel::BuildException("Problem with Kernel Source",status);
 	}
 
 	status = clBuildProgram(Program,1,&ContextDevice.GetDeviceID(),options,NULL,NULL);
@@ -120,20 +152,20 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 
 	if(!status==0)
 	{
-		std::string message = "Problem with Kernel Building";
-		throw std::exception (message.c_str());
+		std::string message = "Problem with Kernel Building: " + std::string(buildlog);
+		throw clKernel::BuildException(message,status);
 	}
-
-	free(buildlog);
 
 	Kernel = clCreateKernel(Program,kernelname.c_str(),&status);
 
 	if(!status==0)
 	{
-		std::string message = "Problem with Kernel Creation";
-		std::string error = message;
-		throw std::exception (error.c_str());
+		std::string message = "Problem with Kernel Creation: ";
+		std::string logstr = std::string(buildlog);
+		throw clKernel::BuildException(message+logstr,status);
 	}
+
+	free(buildlog);
 
 	clKernel newKernel(*this,NumberOfArgs,Kernel,Program,kernelname);
 	return newKernel;
@@ -148,9 +180,53 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 */
 
 
-void clKernel::Enqueue(WorkGroup Global)
+//void clKernel::Enqueue(WorkGroup Global)
+//{
+//	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
+//
+//	if(!status==0)
+//	{
+//		std::string message = "Problem with Kernel Enqueue";
+//		std::string error = message;
+//		throw std::exception (error.c_str());
+//	}
+//
+//	RunCallbacks();
+//}
+//
+//void clKernel::Enqueue(WorkGroup Global, WorkGroup Local)
+//{
+//	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
+//
+//	if(!status==0)
+//	{
+//		std::string message = "Problem with Kernel Enqueue";
+//		std::string error = message;
+//		throw std::exception (error.c_str());
+//	}
+//
+//	RunCallbacks();
+//}
+
+clEvent clKernel::operator()(WorkGroup Global)
 {
-	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
+	std::vector<cl_event> eventwaitlist;
+
+	// Check callbacks for any input types... need to wait on there write events..
+	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
+	{
+		if(ArgType[arg] == Input || ArgType[arg] == InputOutput)
+		{
+			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
+			if (e!=NULL)
+			{
+				eventwaitlist.push_back(e);
+			}
+		}
+	}
+
+	clEvent KernelFinished;
+	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished.event);
 
 	if(!status==0)
 	{
@@ -159,12 +235,32 @@ void clKernel::Enqueue(WorkGroup Global)
 		throw std::exception (error.c_str());
 	}
 
-	RunCallbacks();
+	RunCallbacks(KernelFinished);
+
+	return KernelFinished;
 }
 
-void clKernel::Enqueue(WorkGroup Global, WorkGroup Local)
+clEvent clKernel::operator()(WorkGroup Global, clEvent StartEvent)
 {
-	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
+	std::vector<cl_event> eventwaitlist;
+
+	// Check callbacks for any input types... need to wait on there write events..
+	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
+	{
+		if(ArgType[arg] == Input || ArgType[arg] == InputOutput)
+		{
+			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
+			if (e!=NULL)
+			{
+				eventwaitlist.push_back(e);
+			}
+		}
+	}
+
+	eventwaitlist.push_back(StartEvent.event);
+
+	clEvent KernelFinished;
+	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished.event);
 
 	if(!status==0)
 	{
@@ -173,44 +269,32 @@ void clKernel::Enqueue(WorkGroup Global, WorkGroup Local)
 		throw std::exception (error.c_str());
 	}
 
-	RunCallbacks();
+	RunCallbacks(KernelFinished);
+
+	return KernelFinished;
 }
 
-void clKernel::operator()(WorkGroup Global)
-{
-	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,NULL,0,NULL,NULL);
+//void clKernel::operator()(WorkGroup Global, WorkGroup Local)
+//{
+//	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
+//
+//	if(!status==0)
+//	{
+//		std::string message = "Problem with Kernel Enqueue";
+//		std::string error = message;
+//		throw std::exception (error.c_str());
+//	}
+//
+//	RunCallbacks();
+//}
 
-	if(!status==0)
-	{
-		std::string message = "Problem with Kernel Enqueue";
-		std::string error = message;
-		throw std::exception (error.c_str());
-	}
-
-	RunCallbacks();
-}
-
-void clKernel::operator()(WorkGroup Global, WorkGroup Local)
-{
-	status = clEnqueueNDRangeKernel(Context.Queue,Kernel,2,NULL,Global.worksize,Local.worksize,0,NULL,NULL);
-
-	if(!status==0)
-	{
-		std::string message = "Problem with Kernel Enqueue";
-		std::string error = message;
-		throw std::exception (error.c_str());
-	}
-
-	RunCallbacks();
-}
-
-void clKernel::RunCallbacks()
+void clKernel::RunCallbacks(clEvent KernelFinished)
 {
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
 		if(ArgType[arg] == Output || ArgType[arg] == InputOutput)
 		{
-			Callbacks[arg]->Update();
+			Callbacks[arg]->Update(KernelFinished);
 		}
 	}
 }

@@ -46,7 +46,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v90</PlatformToolset>
+    <PlatformToolset>v120_CTP_Nov2012</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -67,11 +67,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Program Files %28x86%29\AMD APP SDK\2.9\include;$(IncludePath);C:\Program Files %28x86%29\AMD APP SDK\2.9\include;</IncludePath>
+    <IncludePath>C:\Program Files %28x86%29\AMD APP SDK\2.9\include;$(IncludePath);C:\Boost\boost_1_47_0</IncludePath>
     <LibraryPath>$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);C:\Program Files %28x86%29\AMD APP SDK\2.9\lib\x86_64;C:\Program Files %28x86%29\AMD\clAmdFft\lib64\import;$(LibraryPath);C:\Program Files %28x86%29\AMD APP SDK\2.9\lib\x86_64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VCInstallPath_CTP_NOV2012)\include;$(IncludePath);C:\Program Files %28x86%29\AMD APP SDK\2.9\include;</IncludePath>
+    <IncludePath>$(VCInstallPath_CTP_NOV2012)\include;$(IncludePath);C:\Program Files %28x86%29\AMD APP SDK\2.9\include;;C:\Boost\boost_1_47_0</IncludePath>
     <LibraryPath>$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);;C:\Program Files %28x86%29\AMD APP SDK\2.9\lib\x86_64</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

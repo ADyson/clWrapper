@@ -5,12 +5,17 @@
 #include <stdlib.h>
 #include "CL/OpenCl.h"
 
-// Use templates with default arguments.
+// Define clWrapper11 to allow for template functions with default arguments.
+// NB: This is only possible since C++11
+
 //#define clWrapper11
 
 class clContext;
 class clDevice;
 class clKernel;
+class clEvent;
+class clEventWaitList;
+
 template <class T> class Auto;
 template <class T> class Manual;
 template <class T, template <class> class AutoPolicy> class clMemory;
@@ -77,7 +82,16 @@ private:
 class Notify abstract
 {
 public:
-virtual void Update(){};
+	virtual void Update(clEvent KernelFinished)=0;
+	virtual clEvent GetFinishedWriteEvent()=0;
+	virtual clEvent GetFinishedReadEvent()=0;
+};
+
+// Used to synchronise OpenCL functions that depend on other results.
+class clEvent
+{
+public:
+	cl_event event;
 };
 
 // Wrapper for OpenCL context, used to create kernels and memory buffers
@@ -90,8 +104,11 @@ public:
 
 	cl_context Context;
 	cl_command_queue Queue;
+
 	clDevice ContextDevice;
 	void WaitForQueueFinish();
+	void QueueFlush();
+
 
 	// IMPORTANT - we can return as clMemory instead of clMemoryImpl, this allows us to use auto.
 	// it will get automatically converted to the correct type anyway
@@ -135,10 +152,28 @@ public:
 	//clKernel BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs);
 };
 
+class clDoubleQueueContext: public clContext
+{
+public:
+	clDoubleQueueContext(clDevice _ContextDevice, cl_context _Context, cl_command_queue _Queue, cl_command_queue _IOQueue)
+		: clContext(_ContextDevice,_Context,_Queue), IOQueue(_IOQueue){};
+
+	cl_command_queue IOQueue;
+	void WaitForIOQueueFinish();
+	void IOQueueFlush();
+};
+
 // Wrapper for individual kernel objects
 class clKernel
 {
 public:
+	class BuildException: public std::runtime_error
+	{
+	public:
+		BuildException(std::string message, cl_int status): runtime_error(message), Status(status){};
+		cl_int Status;
+	};
+
 	int NumberOfArgs;
 
 	clKernel(clContext _context, int _NumberOfArgs, cl_kernel _kernel, cl_program _program, std::string _name)
@@ -168,10 +203,11 @@ public:
 		status |= clSetKernelArg(Kernel,position,size*sizeof(T),NULL);
 	}
 
-	void Enqueue(WorkGroup Global);
-	void Enqueue(WorkGroup Global, WorkGroup Local);
-	void operator()(WorkGroup Global);
-	void operator()(WorkGroup Global, WorkGroup Local);
+	//void Enqueue(WorkGroup Global);
+	//void Enqueue(WorkGroup Global, WorkGroup Local);
+	clEvent operator()(WorkGroup Global);
+	clEvent operator()(WorkGroup Global, clEvent StartEvent);
+	//void operator()(WorkGroup Global, WorkGroup Local);
 
 private:
 	std::vector<ArgTypes> ArgType;
@@ -182,7 +218,7 @@ private:
 	std::string Name;
 	cl_int status;
 
-	void RunCallbacks();
+	void RunCallbacks(clEvent KernelFinished);
 };
 
 // This class can facilitate automatically retrieving changes to OpenCL memory buffers.
@@ -195,19 +231,27 @@ public:
 	size_t Size;
 	bool isAuto;
 	std::vector<T> Local;
+
+	virtual clEvent Read(std::vector<T>&data)=0;
+	virtual clEvent Read(std::vector<T>&data,clEvent KernelFinished)=0;
+	virtual clEvent GetStartWriteEvent()=0;
+	virtual clEvent GetStartReadEvent()=0;
+	virtual clEvent GetFinishedWriteEvent()=0;
+	virtual clEvent GetFinishedReadEvent()=0;
 	
 	std::vector<T>& GetLocal()
-	{
+	{	
+		cl_event e = GetStartReadEvent().event;
+		clWaitForEvents(1,&e);
 		return Local;
 	};
 
-	virtual void Read(std::vector<T>&data){};
 
-	void Update()
+	void Update(clEvent KernelFinished)
 	{
 		if(Local.empty() == true || Local.size() != Size)
 			Local.resize(Size);
-		Read(Local);
+		Read(Local,KernelFinished);
 	}
 };
 
@@ -218,14 +262,23 @@ public:
 	Manual<T>(size_t size): Size(size), isAuto(false) {};
 	const bool isAuto;
 	size_t Size;
-	void Update(){};
+	clEvent KernelFinished;
+	void Update(clEvent _KernelFinished){KernelFinished = _KernelFinished;};
 
-	virtual void Read(std::vector<T>&data){};
+	virtual clEvent Read(std::vector<T>&data)=0;
+	virtual clEvent Read(std::vector<T>&data,clEvent KernelFinished)=0;
+	virtual clEvent GetStartWriteEvent()=0;
+	virtual clEvent GetStartReadEvent()=0;
+	virtual clEvent GetFinishedWriteEvent()=0;
+	virtual clEvent GetFinishedReadEvent()=0;
 
 	std::vector<T> CreateLocalCopy()
 	{
 		std::vector<T> Local(Size);
-		Read(Local);
+		if(KernelFinished.event!=NULL)
+			Read(Local,KernelFinished);
+		else
+			Read(Local);
 		return Local;
 	};
 };
@@ -246,18 +299,47 @@ public:
 	typedef T MemType;
 	cl_mem& GetBuffer(){ return Buffer; };
 	size_t	GetSize(){ return Size*sizeof(MemType); };
-
-	// Called whenever this buffer is used as an Output type in an enqueued Kernel.
-
 	
-	void Read(std::vector<T> &data)
+	// Will wait for this event to complete before performing read.
+	clEvent StartReadEvent;
+	// This event signifies a read has been performed.
+	clEvent FinishedReadEvent;
+	// This event will be completed after we write to this memory.
+	clEvent FinishedWriteEvent;
+	// Write will not begin until this event is completed.
+	clEvent StartWriteEvent;
+
+	virtual clEvent GetFinishedWriteEvent(){return FinishedWriteEvent;};
+	virtual clEvent GetFinishedReadEvent(){return FinishedReadEvent;};
+	virtual clEvent GetStartWriteEvent(){return StartWriteEvent;};
+	virtual clEvent GetStartReadEvent(){return StartReadEvent;};
+			
+	clEvent Read(std::vector<T> &data)
 	{
-		clEnqueueReadBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
+		clEnqueueReadBuffer(Context.Queue,Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent.event);
+		return FinishedReadEvent;
 	};
 
-	void Write(std::vector<T> &data)
+	// Wait on single event before reading
+	clEvent Read(std::vector<T> &data, clEvent Start)
 	{
-		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_TRUE,0,data.size()*sizeof(T),&data[0],0,NULL,NULL);
+		StartReadEvent = Start;
+		clEnqueueReadBuffer(Context.Queue,Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedReadEvent.event);
+		return FinishedReadEvent;
+	};
+
+	clEvent Write(std::vector<T> &data)
+	{
+		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent.event);
+		return FinishedWriteEvent;
+	};
+
+	// Wait on single event before writing.
+	clEvent Write(std::vector<T> &data, clEvent Start)
+	{
+		StartWriteEvent = Start;
+		clEnqueueWriteBuffer(Context.Queue,Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedWriteEvent.event);
+		return FinishedWriteEvent;
 	};
 
 private:
@@ -270,6 +352,7 @@ private:
 		clReleaseMemObject(Buffer);
 	};
 
+
 	cl_mem Buffer;
 	size_t Size;
 	clContext Context;
@@ -279,6 +362,7 @@ private:
 template <class T, template <class> class AutoPolicy = Manual > class clMemory: public clMemoryImpl<T,AutoPolicy>
 {
 public:
+	// Specify which base class constructor to call
 	clMemory<T,AutoPolicy>(const clMemoryImpl<T,AutoPolicy>& BaseType) : clMemoryImpl<T,AutoPolicy>(BaseType){};
 	~clMemory<T,AutoPolicy>(){ Release(); };
 };
@@ -290,5 +374,6 @@ public:
 	//~OpenCL(void);
 	std::vector<clDevice> GetDeviceList();
 	clContext MakeContext(clDevice& dev);
+	clDoubleQueueContext MakeDoubleQueueContext(clDevice& dev);
 };
 
