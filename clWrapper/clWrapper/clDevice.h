@@ -10,6 +10,8 @@ class clDevice
 		: deviceID(devID), deviceNum(devNum), platformNum(platNum), platformname(platName), devicename(devName){};
 
 	cl_device_id& GetDeviceID(){ return deviceID; };
+	std::string GetDeviceName(){ return devicename; };
+	std::string GetPlatformName(){ return platformname; };
 
 private:
 	int platformNum;

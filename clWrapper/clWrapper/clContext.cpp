@@ -40,6 +40,6 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 
 	free(buildlog);
 
-	clKernel newKernel(this,NumberOfArgs,Kernel,Program,kernelname);
+	clKernel newKernel(this,NumberOfArgs,Kernel,Program,kernelname,status);
 	return newKernel;
 }

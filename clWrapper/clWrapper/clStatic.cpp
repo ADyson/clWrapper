@@ -1,19 +1,6 @@
 #include "clStatic.h"
 #include <iostream>
 
-std::string trim(const std::string& str,
-                 const std::string& whitespace = " \t")
-{
-    const int strBegin = str.find_first_not_of(whitespace);
-    if (strBegin == std::string::npos)
-        return ""; // no content
-
-    const int strEnd = str.find_last_not_of(whitespace);
-    const int strRange = strEnd - strBegin + 1;
-
-    return str.substr(strBegin, strRange);
-}
-
 
 std::list<clDevice> OpenCL::GetDeviceList()
 {
@@ -36,8 +23,6 @@ std::list<clDevice> OpenCL::GetDeviceList()
 	std::vector<cl_uint> DevPerPlatform;
 	std::vector<cl_device_id*> devices;
 
-
-
     for (int i = 0; i < numPlatforms; i++) 
 	{
 		DevPerPlatform.push_back(0);
@@ -55,8 +40,6 @@ std::list<clDevice> OpenCL::GetDeviceList()
         // for each device get and store name, platform, and device number
         for (int j = 0; j < DevPerPlatform[i]; j++) 
 		{
-			
-
 			// get device name
 			status =    clGetDeviceInfo(devices[i][j], CL_DEVICE_NAME, 0, NULL, &valueSize);
             value = (char*) malloc(valueSize);
@@ -64,7 +47,7 @@ std::list<clDevice> OpenCL::GetDeviceList()
 			std::string dName = value;
 			free(value);
 			
-			clDevice newDev(devices[i][j],i,j,pName,trim(dName));         
+			clDevice newDev(devices[i][j],i,j,pName,Misc::Trim(dName));         
 			DeviceList.push_back(newDev);
 		}
 		free(Pvalue);

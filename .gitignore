@@ -29,3 +29,6 @@ readme.html
 Cuda version/
 *.xyz
 Stuff for OpenCL wrapper MK2
+*.ipch
+clWrapper/Test/ReadMe.txt
+clWrapper/clWrapper/ReadMe.txt

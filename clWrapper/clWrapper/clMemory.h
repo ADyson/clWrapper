@@ -3,14 +3,21 @@
 
 #include "clWrapper.h"
 
+class clContext;
+
 template <class T, template <class> class AutoPolicy> class clMemory;
 
 template <class T, template <class> class AutoPolicy>
-class clMemoryImpl : public AutoPolicy<T>
+class clMemory : public AutoPolicy<T>
 {
+private:
+	cl_mem Buffer;
+	size_t Size;
+	clContext* Context;
+
 public:
+	mutable int* refPtr;
 	friend class clContext;
-	friend class clMemory<T,AutoPolicy>;
 	typedef T MemType;
 	cl_mem& GetBuffer(){ return Buffer; };
 	size_t	GetSize(){ return Size*sizeof(MemType); };
@@ -57,29 +64,34 @@ public:
 		return FinishedWriteEvent;
 	};
 
+	void IncrementRefCount() const
+	{
+		refPtr[0]++;
+	}
+
+	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){ refPtr = new int[1]; refPtr[0]=1;};
+	clMemory<T,AutoPolicy>(const clMemory& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
+	,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){ RHS.IncrementRefCount(); refPtr = RHS.refPtr;};
+	~clMemory<T,AutoPolicy>(){ 
+		if(refPtr[0]==1)
+		{
+			Release();
+			delete[] refPtr;
+		}
+		else
+		{
+			refPtr[0]--;
+		}
+	};
+
 private:
-	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
-	clMemoryImpl<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){};
-	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size){};
+	// No Copying Allowed
+	clMemory<T,AutoPolicy>& operator= (const clMemory<T,AutoPolicy>& RHS);
 
 	void Release()
 	{
 		clReleaseMemObject(Buffer);
 	};
-
-
-	cl_mem Buffer;
-	size_t Size;
-	clContext* Context;
-};
-
-// This type automatically destroys memory, can only be constructed from a clMemory.
-template <class T, template <class> class AutoPolicy = Manual > class clMemory: public clMemoryImpl<T,AutoPolicy>
-{
-public:
-	// Specify which base class constructor to call
-	clMemory<T,AutoPolicy>(const clMemoryImpl<T,AutoPolicy>& BaseType) : clMemoryImpl<T,AutoPolicy>(BaseType){};
-	~clMemory<T,AutoPolicy>(){ Release(); };
 };
 
 #endif
