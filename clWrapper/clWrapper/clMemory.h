@@ -16,7 +16,6 @@ private:
 	clContext* Context;
 
 public:
-	mutable int* refPtr;
 	friend class clContext;
 	typedef T MemType;
 	cl_mem& GetBuffer(){ return Buffer; };
@@ -39,6 +38,7 @@ public:
 	clEvent Read(std::vector<T> &data)
 	{
 		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent.event);
+		FinishedReadEvent.Set();
 		return FinishedReadEvent;
 	};
 
@@ -47,12 +47,14 @@ public:
 	{
 		StartReadEvent = Start;
 		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedReadEvent.event);
+		FinishedReadEvent.Set();
 		return FinishedReadEvent;
 	};
 
 	clEvent Write(std::vector<T> &data)
 	{
 		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent.event);
+		FinishedWriteEvent.Set();
 		return FinishedWriteEvent;
 	};
 
@@ -61,36 +63,30 @@ public:
 	{
 		StartWriteEvent = Start;
 		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedWriteEvent.event);
+		FinishedWriteEvent.Set();
 		return FinishedWriteEvent;
 	};
 
-	void IncrementRefCount() const
-	{
-		refPtr[0]++;
-	}
+	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), 
+		AutoPolicy<T>(size), FinishedReadEvent(), FinishedWriteEvent(), StartReadEvent(), StartWriteEvent(){};
+	//clMemory<T,AutoPolicy>(const clMemory<T,AutoPolicy>& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
+	//,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){};
 
-	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){ refPtr = new int[1]; refPtr[0]=1;};
-	clMemory<T,AutoPolicy>(const clMemory& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
-	,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){ RHS.IncrementRefCount(); refPtr = RHS.refPtr;};
+
 	~clMemory<T,AutoPolicy>(){ 
-		if(refPtr[0]==1)
-		{
 			Release();
-			delete[] refPtr;
-		}
-		else
-		{
-			refPtr[0]--;
-		}
 	};
+
+
 
 private:
 	// No Copying Allowed
-	clMemory<T,AutoPolicy>& operator= (const clMemory<T,AutoPolicy>& RHS);
+	clMemory<T,AutoPolicy>& operator= (const clMemory<T,AutoPolicy>& other){};
 
 	void Release()
 	{
-		clReleaseMemObject(Buffer);
+		if(Buffer) // Does this work?
+			clReleaseMemObject(Buffer);
 	};
 };
 

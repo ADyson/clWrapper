@@ -16,5 +16,6 @@
 #include "Notify.h"
 #include "clEvent.h"
 #include "Misc.h"
+#include "boost/shared_ptr.hpp"
 
 

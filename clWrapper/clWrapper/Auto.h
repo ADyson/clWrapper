@@ -8,7 +8,9 @@
 template <class T> class Auto abstract : public Notify
 {
 public:
-	Auto<T>(size_t size): Size(size), isAuto(true){};
+	Auto<T>(size_t size): Size(size), isAuto(true){
+		Local.resize(0);
+	};
 
 	size_t Size;
 	bool isAuto;
@@ -30,8 +32,9 @@ public:
 	// an event before updating itself.
 	std::vector<T>& GetLocal()
 	{	
-		cl_event e = GetFinishedReadEvent().event;
-		clWaitForEvents(1,&e);
+		clEvent e = GetFinishedReadEvent();
+		if(e.isSet())
+			clWaitForEvents(1,&e.event);
 		return Local;
 	};
 

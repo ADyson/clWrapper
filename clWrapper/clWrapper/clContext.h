@@ -31,37 +31,31 @@ public:
 	cl_command_queue& GetQueue(){ return Queue; };
 	virtual cl_command_queue& GetIOQueue(){return Queue;};
 
-
-	// IMPORTANT - we can return as clMemory instead of clMemoryImpl, this allows us to use auto.
-	// it will get automatically converted to the correct type anyway
-	// however it is possible that without RVO the conversion could happen and then be copied 
-	// causing destructor to deallocate memory...
-	
 	// Use default template arguments for template functions only with c++11 or later.
 	#ifdef clWrapper11
-	template<class T,template <class> class AutoPolicy = Manual > clMemory<T,AutoPolicy> CreateBuffer(size_t size)
+	template<class T,template <class> class AutoPolicy = Manual > boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t size)
 	{
-		clMemory<T,AutoPolicy> Mem(this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem = new clMemory<T,AutoPolicy>(this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status));
 		return Mem;
 	};
 
-	template<class T,template <class> class AutoPolicy = Manual > clMemory<T,AutoPolicy> CreateBuffer(size_t size, enum MemoryFlags flags)
+	template<class T,template <class> class AutoPolicy = Manual > boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t size, enum MemoryFlags flags)
 	{
-		clMemory<T,AutoPolicy> Mem(this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem = new clMemory<T,AutoPolicy>(this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status));
 		return Mem;
 	};
 	#endif
 
 	#ifndef clWrapper11
-	template<class T,template <class> class AutoPolicy> clMemory<T,AutoPolicy> CreateBuffer(size_t size)
+	template<class T,template <class> class AutoPolicy> boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t size)
 	{
-		clMemory<T,AutoPolicy> Mem(this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status)));
 		return Mem;
 	};
 
-	template<class T,template <class> class AutoPolicy > clMemory<T,AutoPolicy> CreateBuffer(size_t size, enum MemoryFlags flags)
+	template<class T,template <class> class AutoPolicy > boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t size, enum MemoryFlags flags)
 	{
-		clMemory<T,AutoPolicy> Mem(this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status)));
 		return Mem;
 	};
 	#endif

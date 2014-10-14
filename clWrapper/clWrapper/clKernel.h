@@ -38,11 +38,11 @@ public:
 	}
 
 	// Overload for OpenCL Memory Buffers
-	template <class T, template <class> class AutoPolicy> void SetArg(int position, clMemory<T,AutoPolicy>& arg, ArgTypes ArgumentType = Unspecified)
+	template <class T, template <class> class AutoPolicy> void SetArg(int position, boost::shared_ptr<clMemory<T,AutoPolicy>>& arg, ArgTypes ArgumentType = Unspecified)
 	{
 		ArgType[position] = ArgumentType;
-		Callbacks[position] = &arg;
-		status |= clSetKernelArg(Kernel,position,sizeof(cl_mem),&arg.GetBuffer());
+		Callbacks[position] = arg.get();
+		status |= clSetKernelArg(Kernel,position,sizeof(cl_mem),&arg->GetBuffer());
 	}
 
 	template <class T> void SetLocalMemoryArg(int position, int size) 
@@ -50,11 +50,10 @@ public:
 		status |= clSetKernelArg(Kernel,position,size*sizeof(T),NULL);
 	}
 
-	//void Enqueue(clWorkGroup Global);
-	//void Enqueue(clWorkGroup Global, clWorkGroup Local);
 	clEvent operator()(clWorkGroup Global);
 	clEvent operator()(clWorkGroup Global, clEvent StartEvent);
-	//void operator()(clWorkGroup Global, clWorkGroup Local);
+	clEvent operator()(clWorkGroup Global, clWorkGroup Local);
+	clEvent operator()(clWorkGroup Global, clWorkGroup Local, clEvent StartEvent);
 	
 	cl_int GetStatus(){return status; };
 	int NumberOfArgs;
