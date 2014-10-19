@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 {
 	std::list<clDevice> DevList = OpenCL::GetDeviceList();
 	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeContext(GPU,QueueType::InOrder);
 	
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 
@@ -216,4 +216,47 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 	std::vector<float> Result(1024,11.23f);
 
 	BOOST_REQUIRE_EQUAL_COLLECTIONS(Result.begin(),Result.end(),GPUBuffer->GetLocal().begin(),GPUBuffer->GetLocal().end());
+}
+
+BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
+{
+	std::list<clDevice> DevList = OpenCL::GetDeviceList();
+	clDevice GPU = DevList.front();
+	clContext GPUContext = OpenCL::MakeContext(GPU,InOrderWithProfiling);
+	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
+	
+	std::vector<boost::shared_ptr<clMemory<float,Auto>>> Buffers;
+	Buffers.push_back(GPUContext.CreateBuffer<float,Auto>(1024));
+
+	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
+"{		\n"
+"	int xid = get_global_id(0);	\n"
+"	int yid = get_global_id(1);	\n"
+"	if(xid < width && yid < height) \n"
+"	{	\n"
+"		int Index = xid + width*yid; \n"
+"		Input[Index] += value; \n"
+"	}	\n"
+"}		\n"
+;
+	std::vector<float> InitialData = std::vector<float>(1024,6.23f);
+	GPUBuffer->Write(InitialData);
+
+	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+
+	GPUKernel.SetArg(0,GPUBuffer,InputOutput);
+	GPUKernel.SetArg(1,1024);
+	GPUKernel.SetArg(2,1);
+	GPUKernel.SetArg(3,5.0f);
+
+	clWorkGroup Work(1024,1,1);
+	clEvent profile = GPUKernel(Work);
+
+	cl_ulong time = profile.GetElapsedTime();
+	GPUContext.WaitForQueueFinish();
+
+
+	BOOST_REQUIRE_GT(time,0);
+
+
 }
