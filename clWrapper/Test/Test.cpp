@@ -6,6 +6,9 @@
 
 BOOST_AUTO_TEST_CASE(FindsSomeDevices)
 {
+	//auto list = OpenCL::GetDeviceList();
+	//std::for_each(list.begin(),list.end(),[](clDevice dev ){printf(dev.GetDeviceName().c_str()+"\n");});
+
     BOOST_REQUIRE_GT(OpenCL::GetDeviceList().size(),0);
 }
 
@@ -157,6 +160,8 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 
 	clWorkGroup Work(1024,1,1);
 	GPUKernel(Work);
+
+	std::vector<float> loc = GPUBuffer->GetLocal();
 
 	GPUContext.WaitForQueueFinish();
 

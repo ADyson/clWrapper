@@ -43,3 +43,10 @@ clKernel clContext::BuildKernelFromString(const char* codestring, std::string ke
 	clKernel newKernel(this,NumberOfArgs,Kernel,Program,kernelname,status);
 	return newKernel;
 }
+
+clFourier clContext::BuildOutOfPlace2DFFT(int width, int height)
+{
+	clFourier FFT(this);
+	FFT.Setup(width,height);
+	return FFT;
+}

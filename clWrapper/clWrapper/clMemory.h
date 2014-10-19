@@ -5,8 +5,6 @@
 
 class clContext;
 
-template <class T, template <class> class AutoPolicy> class clMemory;
-
 template <class T, template <class> class AutoPolicy>
 class clMemory : public AutoPolicy<T>
 {
