@@ -3,6 +3,7 @@
 #define BOOST_TEST_MAIN
 #include "stdafx.h"
 #include "clWrapper.h"
+#include <complex>
 
 BOOST_AUTO_TEST_CASE(FindsSomeDevices)
 {
@@ -27,12 +28,7 @@ BOOST_AUTO_TEST_CASE(CanAllocateBuffers)
 	clDevice GPU = DevList.front();
 	clContext GPUContext = OpenCL::MakeContext(GPU,InOrderWithProfiling);
 	
-	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
-
-	std::vector<boost::shared_ptr<clMemory<float,Auto>>> Buffers;
-	Buffers.push_back(GPUContext.CreateBuffer<float,Auto>(1024));
-	Buffers.push_back(GPUContext.CreateBuffer<float,Auto>(1024));
-	
+	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);	
 	std::vector<float> loc = GPUBuffer->GetLocal();
 
 	BOOST_REQUIRE_EQUAL(GPUContext.GetStatus(),0);
@@ -58,7 +54,7 @@ BOOST_AUTO_TEST_CASE(CanCompileKernel)
 "}		\n"
 ;
 
-	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 	BOOST_REQUIRE_EQUAL(GPUContext.GetStatus(),0);
 }
 
@@ -84,7 +80,7 @@ BOOST_AUTO_TEST_CASE(CanSetArguments)
 "}		\n"
 ;
 
-	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
 	GPUKernel.SetArg(0,Buffers[0],InputOutput);
 
@@ -112,7 +108,7 @@ BOOST_AUTO_TEST_CASE(CanEnqueueKernel)
 	"}		\n"
 	;
 
-	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
 	GPUKernel.SetArg(0,GPUBuffer,InputOutput);
 	GPUKernel.SetArg(1,1024);
@@ -151,7 +147,7 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 	"}		\n"
 	;
 
-	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
 	GPUKernel.SetArg(0,GPUBuffer,InputOutput);
 	GPUKernel.SetArg(1,1024);
@@ -174,9 +170,6 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 	clDevice GPU = DevList.front();
 	clContext GPUContext = OpenCL::MakeContext(GPU,InOrderWithProfiling);
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
-	
-	std::vector<boost::shared_ptr<clMemory<float,Auto>>> Buffers;
-	Buffers.push_back(GPUContext.CreateBuffer<float,Auto>(1024));
 
 	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
 "{		\n"
@@ -192,7 +185,7 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 	std::vector<float> InitialData = std::vector<float>(1024,6.23f);
 	GPUBuffer->Write(InitialData);
 
-	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
 	GPUKernel.SetArg(0,GPUBuffer,InputOutput);
 	GPUKernel.SetArg(1,1024);
@@ -201,17 +194,6 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 
 	clWorkGroup Work(1024,1,1);
 	GPUKernel(Work);
-
-	GPUContext.WaitForQueueFinish();
-
-	GPUKernel.SetArg(0,Buffers[0],InputOutput);
-	GPUKernel.SetArg(1,1024);
-	GPUKernel.SetArg(2,1);
-	GPUKernel.SetArg(3,5.0f);
-
-	GPUKernel(Work);
-
-	GPUContext.WaitForQueueFinish();
 
 	std::vector<float> Result(1024,11.23f);
 
@@ -225,9 +207,6 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 	clContext GPUContext = OpenCL::MakeContext(GPU,InOrderWithProfiling);
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 	
-	std::vector<boost::shared_ptr<clMemory<float,Auto>>> Buffers;
-	Buffers.push_back(GPUContext.CreateBuffer<float,Auto>(1024));
-
 	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
 "{		\n"
 "	int xid = get_global_id(0);	\n"
@@ -242,7 +221,7 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 	std::vector<float> InitialData = std::vector<float>(1024,6.23f);
 	GPUBuffer->Write(InitialData);
 
-	clKernel GPUKernel = GPUContext.BuildKernelFromString(TestSource,"clTest",4);
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
 	GPUKernel.SetArg(0,GPUBuffer,InputOutput);
 	GPUKernel.SetArg(1,1024);
@@ -255,8 +234,26 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 	cl_ulong time = profile.GetElapsedTime();
 	GPUContext.WaitForQueueFinish();
 
-
 	BOOST_REQUIRE_GT(time,0);
 
 
+}
+
+BOOST_AUTO_TEST_CASE(FourierTransformWorks)
+{
+	std::list<clDevice> DevList = OpenCL::GetDeviceList();
+	clDevice GPU = DevList.front();
+	clContext GPUContext = OpenCL::MakeContext(GPU,InOrder);
+
+	boost::shared_ptr<clMemory<std::complex<float>,Auto>> GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	boost::shared_ptr<clMemory<std::complex<float>,Auto>> GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	std::vector<std::complex<float>> InitialData = std::vector<std::complex<float>>(1024*1024,1.0f);
+	GPUBuffer->Write(InitialData);
+
+	clFourier GPUKernel = clFourier(GPUContext,1024,1024);
+
+	GPUKernel(GPUBuffer,GPUBuffer2,CLFFT_FORWARD);
+	GPUContext.WaitForQueueFinish();
+	
+	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
 }

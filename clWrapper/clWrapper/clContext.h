@@ -20,7 +20,6 @@ private:
 	cl_context Context;
 	cl_command_queue Queue;
 	clDevice ContextDevice;
-	cl_context& GetContext(){return Context;};
 
 public:
 	clContext(clDevice _ContextDevice, cl_context _Context, cl_command_queue _Queue, cl_int _Status)
@@ -30,6 +29,7 @@ public:
 	void QueueFlush(){clFlush(Queue);};
 
 	clDevice GetContextDevice(){return ContextDevice;};
+	cl_context& GetContext(){return Context;};
 	cl_int GetStatus(){return Status;};
 	cl_command_queue& GetQueue(){ return Queue; };
 	virtual cl_command_queue& GetIOQueue(){return Queue;};
@@ -62,11 +62,6 @@ public:
 		return Mem;
 	};
 	#endif
-
-	clKernel BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);
-	clFourier BuildOutOfPlace2DFFT(int width, int height);
-	//clKernel BuildKernelFromFile(const char* filename, std::string kernelname, int NumberOfArgs);
-
 };
 
 

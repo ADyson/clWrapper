@@ -23,11 +23,12 @@ public:
 		cl_int Status;
 	};
 
-	clKernel(clContext* _context, int _NumberOfArgs, cl_kernel _kernel, cl_program _program, std::string _name, cl_int _status)
-		: Context(_context), NumberOfArgs(_NumberOfArgs), Kernel(_kernel), Program(_program), Name(_name), status(_status)
+	clKernel(clContext &_context, const char* codestring, int _NumberOfArgs, std::string _name)
+		: Context(&_context), NumberOfArgs(_NumberOfArgs), Name(_name)
 	{
 		ArgType.resize(_NumberOfArgs);
 		Callbacks.resize(_NumberOfArgs);
+		BuildKernelFromString(codestring,_name,NumberOfArgs);
 	}
 
 	// Can enter arguments as literals now...
@@ -68,6 +69,7 @@ private:
 	std::string Name;
 
 	void RunCallbacks(clEvent KernelFinished);
+	void BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);
 };
 
 #endif

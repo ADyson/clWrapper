@@ -77,38 +77,8 @@ void clFourier::Setup(int width, int height)
 	}
 }
 
-clEvent clFourier::operator()(cl_mem &input, cl_mem &output, clfftDirection Dir)
-{
-	clEvent finished;
-
-	if(buffersize)
-		fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), 0, NULL, &finished.event, 
-			&input, &output, clMedBuffer->GetBuffer() );
-	else
-		fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), 0, NULL, &finished.event, 
-			&input, &output, NULL );
-
-	finished.Set();
-
-	return finished;
-}
-
-template <class T, template <class> class AutoPolicy, template <class> class AutoPolicy2> 
-clEvent clFourier::operator()(boost::shared_ptr<clMemory<T,AutoPolicy2>>& input, boost::shared_ptr<clMemory<T,AutoPolicy>>& output, clfftDirection Dir)
-{
-	clEvent finished;
-
-	if(buffersize)
-		fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), 0, NULL, &finished.event, 
-			&input->GetBuffer(), &output->GetBuffer(), clMedBuffer->GetBuffer() );
-	else
-		fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), 0, NULL, &finished.event, 
-			&input->GetBuffer(), &output->GetBuffer(), NULL );
-	
-	finished.Set();
-
-	if(output->isAuto)
-		output->Update(finished);
-
-	return finished;
-}
+clFourier::clFourier(clContext &Context, int _width, int _height): Context(&Context), width(_width), height(_height)
+{ 
+	AutoTeardownFFT::GetInstance();
+	Setup(_width,_height);
+};
