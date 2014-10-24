@@ -33,7 +33,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120_CTP_Nov2012</PlatformToolset>
+    <PlatformToolset>v90</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -71,15 +71,15 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Program Files %28x86%29\AMD APP SDK\2.9\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Program Files %28x86%29\AMD APP SDK\2.9\lib\x86_64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Program Files %28x86%29\AMD APP SDK\2.9\include;C:\Program Files\Boost\boost_1_56_0;$(IncludePath);C:\Program Files %28x86%29\AMD\clAmdFft\include</IncludePath>
+    <LibraryPath>C:\Program Files %28x86%29\AMD APP SDK\2.9\lib\x86_64;C:\Program Files %28x86%29\AMD\clAmdFft\lib64\import;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Program Files %28x86%29\AMD APP SDK\2.9\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files %28x86%29\AMD APP SDK\2.9\include;$(IncludePath);C:\Program Files %28x86%29\AMD\clAmdFft\include</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -108,7 +108,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>OpenCL.lib</AdditionalDependencies>
+      <AdditionalDependencies>OpenCL.lib;clFFT.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,25 +153,25 @@
     <ClInclude Include="clContext.h" />
     <ClInclude Include="clDevice.h" />
     <ClInclude Include="clEvent.h" />
+    <ClInclude Include="clFourier.h" />
     <ClInclude Include="clKernel.h" />
     <ClInclude Include="clMemory.h" />
     <ClInclude Include="clStatic.h" />
     <ClInclude Include="clWorkgroup.h" />
     <ClInclude Include="clWrapper.h" />
+    <ClInclude Include="Enums.h" />
     <ClInclude Include="Manual.h" />
+    <ClInclude Include="Misc.h" />
     <ClInclude Include="Notify.h" />
-    <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="clContext.cpp" />
+    <ClCompile Include="clDevice.cpp" />
+    <ClCompile Include="clFourier.cpp" />
+    <ClCompile Include="clKernel.cpp" />
     <ClCompile Include="clStatic.cpp" />
-    <ClCompile Include="stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="Misc.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

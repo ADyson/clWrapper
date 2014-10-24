@@ -1,16 +1,27 @@
 #ifndef CL_MEMORY_H
 #define CL_MEMORY_H
 
-#include "clWrapper.h"
+#include "clContext.h"
+#include "clEvent.h"
+#include "CL/Opencl.h"
+#include "Auto.h"
+#include "Manual.h"
+#include "Notify.h"
+#include "boost/shared_ptr.hpp"
 
-template <class T, template <class> class AutoPolicy> class clMemory;
+class clContext;
 
 template <class T, template <class> class AutoPolicy>
-class clMemoryImpl : public AutoPolicy<T>
+class clMemory : public AutoPolicy<T>
 {
+private:
+	cl_mem Buffer;
+	size_t Size;
+	clContext* Context;
+
 public:
+	typedef boost::shared_ptr<clMemory<T,AutoPolicy>> Ptr;
 	friend class clContext;
-	friend class clMemory<T,AutoPolicy>;
 	typedef T MemType;
 	cl_mem& GetBuffer(){ return Buffer; };
 	size_t	GetSize(){ return Size*sizeof(MemType); };
@@ -32,6 +43,7 @@ public:
 	clEvent Read(std::vector<T> &data)
 	{
 		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent.event);
+		FinishedReadEvent.Set();
 		return FinishedReadEvent;
 	};
 
@@ -40,12 +52,14 @@ public:
 	{
 		StartReadEvent = Start;
 		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedReadEvent.event);
+		FinishedReadEvent.Set();
 		return FinishedReadEvent;
 	};
 
 	clEvent Write(std::vector<T> &data)
 	{
 		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent.event);
+		FinishedWriteEvent.Set();
 		return FinishedWriteEvent;
 	};
 
@@ -54,32 +68,31 @@ public:
 	{
 		StartWriteEvent = Start;
 		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedWriteEvent.event);
+		FinishedWriteEvent.Set();
 		return FinishedWriteEvent;
 	};
 
-private:
-	// These can only be called by friend class to prevent creation of memory that doesn't deallocate itself.
-	clMemoryImpl<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), AutoPolicy<T>(size){};
-	clMemoryImpl<T,AutoPolicy>(const clMemoryImpl& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size){};
+	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), 
+		AutoPolicy<T>(size), FinishedReadEvent(), FinishedWriteEvent(), StartReadEvent(), StartWriteEvent(){};
+	//clMemory<T,AutoPolicy>(const clMemory<T,AutoPolicy>& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
+	//,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){};
 
-	void Release()
-	{
-		clReleaseMemObject(Buffer);
+
+	~clMemory<T,AutoPolicy>(){ 
+			Release();
 	};
 
 
-	cl_mem Buffer;
-	size_t Size;
-	clContext* Context;
-};
 
-// This type automatically destroys memory, can only be constructed from a clMemory.
-template <class T, template <class> class AutoPolicy = Manual > class clMemory: public clMemoryImpl<T,AutoPolicy>
-{
-public:
-	// Specify which base class constructor to call
-	clMemory<T,AutoPolicy>(const clMemoryImpl<T,AutoPolicy>& BaseType) : clMemoryImpl<T,AutoPolicy>(BaseType){};
-	~clMemory<T,AutoPolicy>(){ Release(); };
+private:
+	// No Copying Allowed
+	clMemory<T,AutoPolicy>& operator= (const clMemory<T,AutoPolicy>& other){};
+
+	void Release()
+	{
+		if(Buffer) // Does this work?
+			clReleaseMemObject(Buffer);
+	};
 };
 
 #endif

@@ -1,18 +1,24 @@
 #ifndef CL_KERNEL_H
 #define CL_KERNEL_H
 
-#include "clWrapper.h"
+#include "clMemory.h"
+#include "clEvent.h"
+#include "Cl/Opencl.h"
+#include "clWorkgroup.h"
 
 // Optionally passed to argument setting.
 // Output types will be updated automatically when data is modified
-enum ArgTypes
+
+namespace ArgumentType
+{
+	enum ArgTypes
 	{
 		Input,
 		Output,
 		InputOutput,
 		Unspecified
 	};
-
+};
 
 class clKernel
 {
@@ -24,26 +30,27 @@ public:
 		cl_int Status;
 	};
 
-	clKernel(clContext* _context, int _NumberOfArgs, cl_kernel _kernel, cl_program _program, std::string _name)
-		: Context(_context), NumberOfArgs(_NumberOfArgs), Kernel(_kernel), Program(_program), Name(_name)
+	clKernel(clContext &_context, const char* codestring, int _NumberOfArgs, std::string _name)
+		: Context(&_context), NumberOfArgs(_NumberOfArgs), Name(_name)
 	{
 		ArgType.resize(_NumberOfArgs);
 		Callbacks.resize(_NumberOfArgs);
+		BuildKernelFromString(codestring,_name,NumberOfArgs);
 	}
 
 	// Can enter arguments as literals now...
-	template <class T> void SetArg(int position, const T arg, ArgTypes ArgumentType = Unspecified)
+	template <class T> void SetArg(int position, const T arg, ArgumentType::ArgTypes ArgumentType = ArgumentType::Unspecified)
 	{
 		ArgType[position] = ArgumentType;
 		status |= clSetKernelArg(Kernel,position,sizeof(T),&arg);
 	}
 
 	// Overload for OpenCL Memory Buffers
-	template <class T, template <class> class AutoPolicy> void SetArg(int position, clMemory<T,AutoPolicy>& arg, ArgTypes ArgumentType = Unspecified)
+	template <class T, template <class> class AutoPolicy> void SetArg(int position, boost::shared_ptr<clMemory<T,AutoPolicy>>& arg, ArgumentType::ArgTypes ArgumentType = Unspecified)
 	{
 		ArgType[position] = ArgumentType;
-		Callbacks[position] = &arg;
-		status |= clSetKernelArg(Kernel,position,sizeof(cl_mem),&arg.GetBuffer());
+		Callbacks[position] = arg.get();
+		status |= clSetKernelArg(Kernel,position,sizeof(cl_mem),&arg->GetBuffer());
 	}
 
 	template <class T> void SetLocalMemoryArg(int position, int size) 
@@ -51,17 +58,17 @@ public:
 		status |= clSetKernelArg(Kernel,position,size*sizeof(T),NULL);
 	}
 
-	//void Enqueue(clWorkGroup Global);
-	//void Enqueue(clWorkGroup Global, clWorkGroup Local);
 	clEvent operator()(clWorkGroup Global);
 	clEvent operator()(clWorkGroup Global, clEvent StartEvent);
-	//void operator()(clWorkGroup Global, clWorkGroup Local);
+	clEvent operator()(clWorkGroup Global, clWorkGroup Local);
+	clEvent operator()(clWorkGroup Global, clWorkGroup Local, clEvent StartEvent);
 	
-	cl_int status;
+	cl_int GetStatus(){return status; };
 	int NumberOfArgs;
 
 private:
-	std::vector<ArgTypes> ArgType;
+	cl_int status;
+	std::vector<ArgumentType::ArgTypes> ArgType;
 	std::vector<Notify*> Callbacks;
 	clContext* Context;
 	cl_program Program;
@@ -69,6 +76,7 @@ private:
 	std::string Name;
 
 	void RunCallbacks(clEvent KernelFinished);
+	void BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);
 };
 
 #endif

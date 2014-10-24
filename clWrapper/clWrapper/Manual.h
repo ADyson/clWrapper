@@ -1,7 +1,8 @@
 #ifndef MANUAL_H
 #define MANUAL_H
 
-#include "clWrapper.h"
+#include "clEvent.h"
+#include "CL/Opencl.h"
 
 // This class is inherited by OpenCL memory buffers that have to manage there own memory lifetimes.
 template <class T> class Manual abstract : public Notify

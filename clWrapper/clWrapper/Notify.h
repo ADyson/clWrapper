@@ -1,7 +1,7 @@
 #ifndef NOTIFY_H
 #define NOTIFY_H
 
-#include "clWrapper.h"
+#include "clEvent.h"
 
 class Notify abstract
 {
