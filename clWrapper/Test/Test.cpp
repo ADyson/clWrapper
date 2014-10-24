@@ -5,11 +5,6 @@
 #include "clWrapper.h"
 #include <complex>
 
-class TestClass
-{
-	clContext Hello;
-	TestClass(): Hello(OpenCL::MakeContext(OpenCL::GetDeviceList(),InOrderWithProfiling)){};
-};
 
 BOOST_AUTO_TEST_CASE(FindsSomeDevices)
 {
@@ -136,7 +131,7 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 	clDevice GPU = DevList.front();
 	clContext GPUContext = OpenCL::MakeContext(GPU,QueueType::InOrder);
 	
-	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
+	clMemory<float,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 
 	std::vector<float> InitialData = std::vector<float>(1024,6.23f);
 	GPUBuffer->Write(InitialData);
@@ -249,8 +244,9 @@ BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 {
 	clContext GPUContext = OpenCL::MakeContext(OpenCL::GetDeviceList(),InOrder,GPU);
 
-	boost::shared_ptr<clMemory<std::complex<float>,Auto>> GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
-	boost::shared_ptr<clMemory<std::complex<float>,Auto>> GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	auto GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+
 	std::vector<std::complex<float>> InitialData = std::vector<std::complex<float>>(1024*1024,1.0f);
 	GPUBuffer->Write(InitialData);
 

@@ -7,6 +7,7 @@
 #include "Auto.h"
 #include "Manual.h"
 #include "Notify.h"
+#include "boost/shared_ptr.hpp"
 
 class clContext;
 
@@ -19,6 +20,7 @@ private:
 	clContext* Context;
 
 public:
+	typedef boost::shared_ptr<clMemory<T,AutoPolicy>> Ptr;
 	friend class clContext;
 	typedef T MemType;
 	cl_mem& GetBuffer(){ return Buffer; };
