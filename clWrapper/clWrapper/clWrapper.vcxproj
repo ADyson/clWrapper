@@ -33,7 +33,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120_CTP_Nov2012</PlatformToolset>
+    <PlatformToolset>v90</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -159,6 +159,7 @@
     <ClInclude Include="clStatic.h" />
     <ClInclude Include="clWorkgroup.h" />
     <ClInclude Include="clWrapper.h" />
+    <ClInclude Include="Enums.h" />
     <ClInclude Include="Manual.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="Notify.h" />
@@ -166,6 +167,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="clContext.cpp" />
+    <ClCompile Include="clDevice.cpp" />
     <ClCompile Include="clFourier.cpp" />
     <ClCompile Include="clKernel.cpp" />
     <ClCompile Include="clStatic.cpp" />

@@ -1,7 +1,7 @@
 #ifndef CL_EVENT_H
 #define CL_EVENT_H
 
-#include "clWrapper.h"
+#include "CL/Opencl.h"
 
 // Used to synchronise OpenCL functions that depend on other results.
 class clEvent

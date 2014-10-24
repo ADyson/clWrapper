@@ -9,8 +9,8 @@
 #include "Auto.h"
 #include "Manual.h"
 #include "clContext.h"
-#include "clStatic.h"
 #include "clDevice.h"
+#include "clStatic.h"
 #include "clWorkgroup.h"
 #include "clKernel.h"
 #include "clFourier.h"
@@ -19,6 +19,4 @@
 #include "clEvent.h"
 #include "Misc.h"
 #include "boost/shared_ptr.hpp"
-
-
 

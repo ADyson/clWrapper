@@ -1,8 +1,12 @@
 #ifndef CL_CONTEXT_H
 #define CL_CONTEXT_H
 
-#include "clWrapper.h"
-class clKernel;
+#include "clMemory.h"
+#include "clDevice.h"
+#include "CL/Opencl.h"
+#include "boost/shared_ptr.hpp"
+
+template <class T, template <class> class AutoPolicy> class clMemory;
 
 enum MemoryFlags
 {
@@ -13,7 +17,6 @@ enum MemoryFlags
 
 class clContext
 {
-	friend class clFourier;
 
 private:
 	cl_int Status;
@@ -25,6 +28,7 @@ public:
 	clContext(clDevice _ContextDevice, cl_context _Context, cl_command_queue _Queue, cl_int _Status)
 		: ContextDevice(_ContextDevice), Context(_Context), Queue(_Queue), Status(_Status){};
 
+	
 	void WaitForQueueFinish(){clFinish(Queue);};
 	void QueueFlush(){clFlush(Queue);};
 

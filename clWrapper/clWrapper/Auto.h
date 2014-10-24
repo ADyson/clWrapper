@@ -1,7 +1,9 @@
 #ifndef AUTO_H
 #define AUTO_H
 
-#include "clWrapper.h"
+#include "clEvent.h"
+#include "Notify.h"
+#include <vector>
 
 // This class can facilitate automatically retrieving changes to OpenCL memory buffers.
 // from kernels with argument types specified.

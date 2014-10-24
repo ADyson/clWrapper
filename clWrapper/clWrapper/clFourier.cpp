@@ -1,4 +1,5 @@
 #include "clFourier.h"
+#include <math.h>
 
 clFourier::~clFourier(void)
 {

@@ -5,6 +5,12 @@
 #include "clWrapper.h"
 #include <complex>
 
+class TestClass
+{
+	clContext Hello;
+	TestClass(): Hello(OpenCL::MakeContext(OpenCL::GetDeviceList(),InOrderWithProfiling)){};
+};
+
 BOOST_AUTO_TEST_CASE(FindsSomeDevices)
 {
 	//auto list = OpenCL::GetDeviceList();
@@ -241,9 +247,7 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 
 BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,InOrder);
+	clContext GPUContext = OpenCL::MakeContext(OpenCL::GetDeviceList(),InOrder,GPU);
 
 	boost::shared_ptr<clMemory<std::complex<float>,Auto>> GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
 	boost::shared_ptr<clMemory<std::complex<float>,Auto>> GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
@@ -253,7 +257,6 @@ BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 	clFourier GPUKernel = clFourier(GPUContext,1024,1024);
 
 	GPUKernel(GPUBuffer,GPUBuffer2,CLFFT_FORWARD);
-	GPUContext.WaitForQueueFinish();
-	
+
 	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
 }

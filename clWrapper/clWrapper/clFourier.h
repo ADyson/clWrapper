@@ -1,18 +1,21 @@
 #ifndef CL_FOURIER_H
 #define CL_FOURIER_H
 
-#include "clWrapper.h"
+#include "clContext.h"
+#include "CL/Opencl.h"
+#include "boost/shared_ptr.hpp"
 #include "clFFT.h"
+#include "clEvent.h"
+#include "clMemory.h"
 
-class clContext;
 class AutoTeardownFFT;
 template <class T, template <class> class AutoPolicy> class clMemory;
 template <class T> class Manual;
 
+
 class clFourier
 {
 	clContext* Context;
-
 	clfftStatus fftStatus;
 	clfftSetupData fftSetupData;
 	clfftPlanHandle fftplan;

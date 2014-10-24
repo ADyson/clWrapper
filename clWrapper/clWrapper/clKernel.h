@@ -1,7 +1,10 @@
 #ifndef CL_KERNEL_H
 #define CL_KERNEL_H
 
-#include "clWrapper.h"
+#include "clMemory.h"
+#include "clEvent.h"
+#include "Cl/Opencl.h"
+#include "clWorkgroup.h"
 
 // Optionally passed to argument setting.
 // Output types will be updated automatically when data is modified

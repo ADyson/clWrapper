@@ -1,7 +1,12 @@
 #ifndef CL_MEMORY_H
 #define CL_MEMORY_H
 
-#include "clWrapper.h"
+#include "clContext.h"
+#include "clEvent.h"
+#include "CL/Opencl.h"
+#include "Auto.h"
+#include "Manual.h"
+#include "Notify.h"
 
 class clContext;
 
