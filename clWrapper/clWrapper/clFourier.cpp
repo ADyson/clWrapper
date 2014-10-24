@@ -1,6 +1,7 @@
 #include "clFourier.h"
 #include <math.h>
 
+
 clFourier::~clFourier(void)
 {
 	clfftDestroyPlan(&fftplan);

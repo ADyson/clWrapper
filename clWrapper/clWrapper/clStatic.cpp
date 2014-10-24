@@ -60,7 +60,7 @@ std::list<clDevice> OpenCL::GetDeviceList()
 	return DeviceList;
 };
 
-clContext OpenCL::MakeContext(clDevice& dev, QueueType Qtype)
+clContext OpenCL::MakeContext(clDevice& dev, Queue::QueueType Qtype)
 {
 	cl_int status;
 	cl_context ctx = clCreateContext(NULL,1,&dev.GetDeviceID(),NULL,NULL,&status);
@@ -70,7 +70,7 @@ clContext OpenCL::MakeContext(clDevice& dev, QueueType Qtype)
 	return Context;
 }
 
-clContext OpenCL::MakeContext(std::list<clDevice> &devices, QueueType Qtype, DeviceType devType)
+clContext OpenCL::MakeContext(std::list<clDevice> &devices, Queue::QueueType Qtype, Device::DeviceType devType)
 {
 	std::list<clDevice>::iterator it =  devices.begin();
 	clDevice dev;

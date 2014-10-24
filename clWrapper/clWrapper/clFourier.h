@@ -12,6 +12,15 @@ class AutoTeardownFFT;
 template <class T, template <class> class AutoPolicy> class clMemory;
 template <class T> class Manual;
 
+// Can't use scoped enums for legacy code
+namespace Direction
+{
+	enum TransformDirection
+	{
+		Forwards,
+		Inverse
+	};
+};
 
 class clFourier
 {
@@ -28,12 +37,14 @@ class clFourier
 	int width,height;
 
 public:
+
 	clFourier(clContext &Context, int _width, int _height);
 	//clFourier(const clFourier &RHS): Context(RHS.Context), fftSetupData(RHS.fftSetupData), fftplan(RHS.fftplan), clMedBuffer(RHS.clMedBuffer), buffersize(RHS.buffersize){};
 	~clFourier(void);
 	template <class T, template <class> class AutoPolicy, template <class> class AutoPolicy2> 
-	clEvent operator()(boost::shared_ptr<clMemory<T,AutoPolicy2>>& input, boost::shared_ptr<clMemory<T,AutoPolicy>>& output, clfftDirection Dir)
+	clEvent operator()(boost::shared_ptr<clMemory<T,AutoPolicy2>>& input, boost::shared_ptr<clMemory<T,AutoPolicy>>& output, Direction::TransformDirection Direction)
 	{
+		clfftDirection Dir = (Direction == Direction::Forwards) ? CLFFT_FORWARD : CLFFT_BACKWARD;
 		clEvent finished;
 
 		if(buffersize)

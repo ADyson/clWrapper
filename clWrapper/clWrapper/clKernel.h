@@ -8,13 +8,17 @@
 
 // Optionally passed to argument setting.
 // Output types will be updated automatically when data is modified
-enum ArgTypes
+
+namespace ArgumentType
+{
+	enum ArgTypes
 	{
 		Input,
 		Output,
 		InputOutput,
 		Unspecified
 	};
+};
 
 class clKernel
 {
@@ -35,14 +39,14 @@ public:
 	}
 
 	// Can enter arguments as literals now...
-	template <class T> void SetArg(int position, const T arg, ArgTypes ArgumentType = Unspecified)
+	template <class T> void SetArg(int position, const T arg, ArgumentType::ArgTypes ArgumentType = ArgumentType::Unspecified)
 	{
 		ArgType[position] = ArgumentType;
 		status |= clSetKernelArg(Kernel,position,sizeof(T),&arg);
 	}
 
 	// Overload for OpenCL Memory Buffers
-	template <class T, template <class> class AutoPolicy> void SetArg(int position, boost::shared_ptr<clMemory<T,AutoPolicy>>& arg, ArgTypes ArgumentType = Unspecified)
+	template <class T, template <class> class AutoPolicy> void SetArg(int position, boost::shared_ptr<clMemory<T,AutoPolicy>>& arg, ArgumentType::ArgTypes ArgumentType = Unspecified)
 	{
 		ArgType[position] = ArgumentType;
 		Callbacks[position] = arg.get();
@@ -64,7 +68,7 @@ public:
 
 private:
 	cl_int status;
-	std::vector<ArgTypes> ArgType;
+	std::vector<ArgumentType::ArgTypes> ArgType;
 	std::vector<Notify*> Callbacks;
 	clContext* Context;
 	cl_program Program;

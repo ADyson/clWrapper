@@ -7,7 +7,7 @@ clEvent clKernel::operator()(clWorkGroup Global)
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == Input || ArgType[arg] == InputOutput)
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
 		{
 			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
 			if (e.isSet())
@@ -40,7 +40,7 @@ clEvent clKernel::operator()(clWorkGroup Global, clEvent StartEvent)
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == Input || ArgType[arg] == InputOutput)
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
 		{
 			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
 			if (e!=NULL)
@@ -74,7 +74,7 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == Input || ArgType[arg] == InputOutput)
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
 		{
 			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
 			if (e!=NULL)
@@ -106,7 +106,7 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEvent Star
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == Input || ArgType[arg] == InputOutput)
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
 		{
 			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
 			if (e!=NULL)
@@ -137,7 +137,7 @@ void clKernel::RunCallbacks(clEvent KernelFinished)
 {
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == Output || ArgType[arg] == InputOutput)
+		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput)
 		{
 			Callbacks[arg]->Update(KernelFinished);
 		}
