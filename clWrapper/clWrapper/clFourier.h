@@ -39,7 +39,21 @@ class clFourier
 public:
 
 	clFourier(clContext &Context, int _width, int _height);
-	//clFourier(const clFourier &RHS): Context(RHS.Context), fftSetupData(RHS.fftSetupData), fftplan(RHS.fftplan), clMedBuffer(RHS.clMedBuffer), buffersize(RHS.buffersize){};
+
+	clFourier(const clFourier &RHS): Context(RHS.Context), width(RHS.width), height(RHS.height){
+		Setup(width,height);
+	};
+
+	clFourier& operator=(const clFourier &RHS){
+		if(this != &RHS){
+			clfftDestroyPlan(&fftplan);
+			width = RHS.width;
+			height = RHS.height;
+			Setup(width,height);
+		}		
+		return *this;
+	};
+
 	~clFourier(void);
 	template <class T, template <class> class AutoPolicy, template <class> class AutoPolicy2> 
 	clEvent operator()(boost::shared_ptr<clMemory<T,AutoPolicy2>>& input, boost::shared_ptr<clMemory<T,AutoPolicy>>& output, Direction::TransformDirection Direction)

@@ -254,5 +254,29 @@ BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 
 	GPUKernel(GPUBuffer,GPUBuffer2,Direction::Forwards);
 
+	// Value of first element should be sqrt(1024*1024)*1 = 1024...
 	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
+
+}
+
+BOOST_AUTO_TEST_CASE(FourierTransformCanBeCopied)
+{
+	clContext GPUContext = OpenCL::MakeContext(OpenCL::GetDeviceList(),Queue::InOrder,Device::GPU);
+
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+
+	std::vector<std::complex<float>> InitialData = std::vector<std::complex<float>>(1024*1024,1.0f);
+	GPUBuffer->Write(InitialData);
+
+	clFourier GPUKernel = clFourier(GPUContext,1024,1024);
+	clFourier GPUKernel2(GPUKernel); // Copy constructor
+	GPUKernel = GPUKernel2; // Copy assignment
+
+	GPUKernel2(GPUBuffer,GPUBuffer2,Direction::Forwards);
+	GPUKernel(GPUBuffer,GPUBuffer2,Direction::Forwards);
+
+	// Value of first element should be sqrt(1024*1024)*1 = 1024...
+	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
+
 }

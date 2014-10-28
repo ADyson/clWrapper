@@ -81,6 +81,7 @@ void clFourier::Setup(int width, int height)
 
 clFourier::clFourier(clContext &Context, int _width, int _height): Context(&Context), width(_width), height(_height)
 { 
-	AutoTeardownFFT::GetInstance();
 	Setup(_width,_height);
+	AutoTeardownFFT::GetInstance();
+	
 };
