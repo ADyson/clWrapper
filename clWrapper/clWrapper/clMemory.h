@@ -10,6 +10,7 @@
 #include "boost/shared_ptr.hpp"
 
 class clContext;
+class MemoryRecord;
 
 template <class T, template <class> class AutoPolicy>
 class clMemory : public AutoPolicy<T>
@@ -18,6 +19,7 @@ private:
 	cl_mem Buffer;
 	size_t Size;
 	clContext* Context;
+	MemoryRecord* Rec;
 
 public:
 	typedef boost::shared_ptr<clMemory<T,AutoPolicy>> Ptr;
@@ -72,13 +74,14 @@ public:
 		return FinishedWriteEvent;
 	};
 
-	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer) : Context(context), Buffer(buffer), Size(size), 
-		AutoPolicy<T>(size), FinishedReadEvent(), FinishedWriteEvent(), StartReadEvent(), StartWriteEvent(){};
+	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer, MemoryRecord* rec) : Context(context), Buffer(buffer), Size(size), 
+		AutoPolicy<T>(size), FinishedReadEvent(), FinishedWriteEvent(), StartReadEvent(), StartWriteEvent(), Rec(rec){};
 	//clMemory<T,AutoPolicy>(const clMemory<T,AutoPolicy>& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
 	//,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){};
 
 
 	~clMemory<T,AutoPolicy>(){ 
+			Context->RemoveMemRecord(Rec);
 			Release();
 	};
 
