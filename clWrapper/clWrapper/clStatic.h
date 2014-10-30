@@ -22,6 +22,8 @@ public:
 	static std::list<clDevice> GetDeviceList();
 	static clContext MakeContext(clDevice& dev, Queue::QueueType Qtype = Queue::QueueType::InOrder);
 	static clContext MakeContext(std::list<clDevice>& devices, Queue::QueueType Qtype = Queue::QueueType::InOrder, Device::DeviceType devType = Device::DeviceType::GPU);
+	static clContext MakeTwoQueueContext(clDevice& dev, Queue::QueueType Qtype = Queue::QueueType::InOrder,Queue::QueueType IOQtype = Queue::QueueType::InOrder);
+	static clContext MakeTwoQueueContext(std::list<clDevice>& devices, Queue::QueueType Qtype = Queue::QueueType::InOrder, Queue::QueueType IOQtype = Queue::QueueType::InOrder, Device::DeviceType devType = Device::DeviceType::GPU);
 };
 
 #endif

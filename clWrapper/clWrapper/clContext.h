@@ -1,7 +1,6 @@
 #ifndef CL_CONTEXT_H
 #define CL_CONTEXT_H
 
-#include "clMemory.h"
 #include <list>
 #include "clDevice.h"
 #include "CL/Opencl.h"
@@ -30,14 +29,15 @@ private:
 	cl_int Status;
 	cl_context Context;
 	cl_command_queue Queue;
+	cl_command_queue IOQueue;
 	clDevice ContextDevice;
 	std::list<MemoryRecord*> MemList;
 
 public:
 	clContext(clDevice _ContextDevice, cl_context _Context, cl_command_queue _Queue, cl_int _Status)
-		: ContextDevice(_ContextDevice), Context(_Context), Queue(_Queue), Status(_Status){};
-
-
+		: ContextDevice(_ContextDevice), Context(_Context), Queue(_Queue), IOQueue(_Queue), Status(_Status){};
+	clContext(clDevice _ContextDevice, cl_context _Context, cl_command_queue _Queue, cl_command_queue _IOQueue, cl_int _Status)
+		: ContextDevice(_ContextDevice), Context(_Context), Queue(_Queue), IOQueue(_IOQueue), Status(_Status){};
 
 	void WaitForQueueFinish(){clFinish(Queue);};
 	void QueueFlush(){clFlush(Queue);};
@@ -46,7 +46,7 @@ public:
 	cl_context& GetContext(){return Context;};
 	cl_int GetStatus(){return Status;};
 	cl_command_queue& GetQueue(){ return Queue; };
-	virtual cl_command_queue& GetIOQueue(){return Queue;};
+	virtual cl_command_queue& GetIOQueue(){return IOQueue;};
 
 	size_t GetOccupiedMemorySize()
 	{
@@ -80,6 +80,4 @@ public:
 	};
 
 };
-
-
 #endif

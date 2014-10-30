@@ -29,6 +29,8 @@ public:
 	virtual clEvent GetStartReadEvent()=0;
 	virtual clEvent GetFinishedWriteEvent()=0;
 	virtual clEvent GetFinishedReadEvent()=0;
+
+	virtual void SetFinishedEvent(clEvent KernelFinished) =0;
 	
 	// This call will block if the Memory is currently waiting on
 	// an event before updating itself.
@@ -48,6 +50,11 @@ public:
 			Local.resize(Size);
 		Read(Local,KernelFinished);
 	}
+
+	void UpdateEventOnly(clEvent KernelFinished)
+	{
+		SetFinishedEvent(KernelFinished);
+	};
 };
 
 #endif

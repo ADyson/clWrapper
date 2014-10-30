@@ -79,23 +79,22 @@ public:
 	//clMemory<T,AutoPolicy>(const clMemory<T,AutoPolicy>& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
 	//,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){};
 
+	void SetFinishedEvent(clEvent KernelFinished)
+	{
+		StartReadEvent = KernelFinished;
+	};
 
 	~clMemory<T,AutoPolicy>(){ 
 			Context->RemoveMemRecord(Rec);
 			Release();
 	};
 
-
-
 private:
-	// No Copying Allowed
 	clMemory<T,AutoPolicy>& operator= (const clMemory<T,AutoPolicy>& other){};
-
 	void Release()
 	{
 		if(Buffer) // Does this work?
 			clReleaseMemObject(Buffer);
 	};
 };
-
 #endif

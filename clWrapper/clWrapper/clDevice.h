@@ -1,7 +1,6 @@
 #ifndef CL_DEVICE_H
 #define CL_DEVICE_H
 
-#include "clDevice.h"
 #include "Cl/OpenCL.h"
 #include <string>
 
@@ -36,5 +35,4 @@ private:
 	std::string devicename;
 	cl_device_id deviceID;
 };
-
 #endif
