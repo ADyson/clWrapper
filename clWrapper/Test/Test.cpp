@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(CanSetArguments)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,Buffers[0],ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,Buffers[0],ArgumentType::InputOutputNoUpdate);
 
 	BOOST_REQUIRE_EQUAL(GPUKernel.GetStatus(),0);
 	BOOST_REQUIRE_EQUAL(GPUContext.GetStatus(),0);
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(CanEnqueueKernel)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -188,7 +188,7 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);

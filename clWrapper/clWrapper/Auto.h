@@ -64,6 +64,7 @@ public:
 		if(Local.empty() == true || Local.size() != Size)
 			Local.resize(Size);
 		Read(Local,KernelFinished);
+		isUpToDate = true;
 	}
 
 	void UpdateEventOnly(clEvent KernelFinished)
