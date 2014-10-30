@@ -306,12 +306,12 @@ BOOST_AUTO_TEST_CASE(KernelCanBeCopied)
 	DummyKernel = GPUKernel;
 	clKernel DummyKernel2(DummyKernel);
 
-	DummyKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	DummyKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	DummyKernel.SetArg(1,1024);
 	DummyKernel.SetArg(2,1024);
 	DummyKernel.SetArg(3,5.0f);
 
-	DummyKernel2.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	DummyKernel2.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	DummyKernel2.SetArg(1,1024);
 	DummyKernel2.SetArg(2,1024);
 	DummyKernel2.SetArg(3,5.0f);
