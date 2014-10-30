@@ -16,6 +16,8 @@ namespace ArgumentType
 		Input,
 		Output,
 		InputOutput,
+		OutputNoUpdate,
+		InputOutputNoUpdate,
 		Unspecified
 	};
 };
@@ -29,6 +31,8 @@ public:
 		BuildException(std::string message, cl_int status): runtime_error(message), Status(status){};
 		cl_int Status;
 	};
+
+	clKernel(){};
 
 	clKernel(clContext &_context, const char* codestring, int _NumberOfArgs, std::string _name)
 		: Context(&_context), NumberOfArgs(_NumberOfArgs), Name(_name)

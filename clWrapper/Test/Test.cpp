@@ -254,5 +254,73 @@ BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 
 	GPUKernel(GPUBuffer,GPUBuffer2,Direction::Forwards);
 
+	// Value of first element should be sqrt(1024*1024)*1 = 1024...
+	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
+
+}
+
+BOOST_AUTO_TEST_CASE(FourierTransformCanBeCopied)
+{
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
+
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+
+	std::vector<std::complex<float>> InitialData = std::vector<std::complex<float>>(1024*1024,1.0f);
+	GPUBuffer->Write(InitialData);
+
+	clFourier GPUKernel = clFourier(GPUContext,1024,1024);
+	clFourier GPUKernel2(GPUKernel); // Copy constructor
+	GPUKernel = GPUKernel2; // Copy assignment
+
+	GPUKernel2(GPUBuffer,GPUBuffer2,Direction::Forwards);
+	GPUKernel(GPUBuffer,GPUBuffer2,Direction::Forwards);
+
+	// Value of first element should be sqrt(1024*1024)*1 = 1024...
 	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
 }
+
+BOOST_AUTO_TEST_CASE(KernelCanBeCopied)
+{
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
+
+	clMemory<float,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024*1024);
+
+	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
+	"{		\n"
+	"	int xid = get_global_id(0);	\n"
+	"	int yid = get_global_id(1);	\n"
+	"	if(xid < width && yid < height) \n"
+	"	{	\n"
+	"		int Index = xid + width*yid; \n"
+	"		Input[Index] += value; \n"
+	"	}	\n"
+	"}		\n"
+	;
+
+	std::vector<float> InitialData = std::vector<float>(1024*1024,6.23f);
+	GPUBuffer->Write(InitialData);
+
+	clKernel DummyKernel;
+	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
+	DummyKernel = GPUKernel;
+	clKernel DummyKernel2(DummyKernel);
+
+	DummyKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	DummyKernel.SetArg(1,1024);
+	DummyKernel.SetArg(2,1024);
+	DummyKernel.SetArg(3,5.0f);
+
+	DummyKernel2.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	DummyKernel2.SetArg(1,1024);
+	DummyKernel2.SetArg(2,1024);
+	DummyKernel2.SetArg(3,5.0f);
+
+	clWorkGroup Work(1024,1024,1);
+	DummyKernel(Work);
+	DummyKernel2(Work);
+
+	// Value of first element should be 6.23 + 5.0 + 5.0
+	BOOST_REQUIRE_EQUAL(16.23f,GPUBuffer->GetLocal()[0]);
+}
+

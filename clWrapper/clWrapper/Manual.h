@@ -21,6 +21,8 @@ public:
 	virtual clEvent GetFinishedWriteEvent()=0;
 	virtual clEvent GetFinishedReadEvent()=0;
 
+	virtual void SetFinishedEvent(clEvent KernelFinished) =0;
+
 	// This will create a vector filled with the current contents of the memory
 	// Will block until the read has been completed
 	std::vector<T> CreateLocalCopy()
@@ -37,6 +39,11 @@ public:
 			clWaitForEvents(1,&e.event);
 		}
 		return Local;
+	};
+
+	void UpdateEventOnly(clEvent KernelFinished)
+	{
+		SetFinishedEvent(KernelFinished);
 	};
 };
 

@@ -1,6 +1,6 @@
 #include "clStatic.h"
 #include <iostream>
-
+#include <vector>
 #include "Misc.h"
 
 
@@ -59,6 +59,49 @@ std::list<clDevice> OpenCL::GetDeviceList()
 
 	return DeviceList;
 };
+
+clContext OpenCL::MakeTwoQueueContext(clDevice& dev, Queue::QueueType Qtype, Queue::QueueType IOQtype)
+{
+	cl_int status;
+	cl_context ctx = clCreateContext(NULL,1,&dev.GetDeviceID(),NULL,NULL,&status);
+	cl_command_queue q = clCreateCommandQueue(ctx,dev.GetDeviceID(),Qtype,&status);
+	cl_command_queue ioq = clCreateCommandQueue(ctx,dev.GetDeviceID(),IOQtype,&status);
+
+	clContext Context(dev,ctx,q,ioq,status);
+	return Context;
+}
+
+clContext OpenCL::MakeTwoQueueContext(std::list<clDevice> &devices, Queue::QueueType Qtype, Queue::QueueType IOQtype, Device::DeviceType devType)
+{
+	std::list<clDevice>::iterator it =  devices.begin();
+	clDevice dev;
+
+	bool found = false;
+
+	for(int i = 1; i <= devices.size() && !found; i++)
+	{
+		if((*it).GetDeviceType() == devType)
+		{
+			dev = *it;
+			found = true;
+		}
+		++it;
+	}
+	
+	if(!found)
+	{
+		throw "No suitable device";
+	}
+
+	cl_int status;
+	cl_context ctx = clCreateContext(NULL,1,&dev.GetDeviceID(),NULL,NULL,&status);
+	cl_command_queue q = clCreateCommandQueue(ctx,dev.GetDeviceID(),Qtype,&status);
+	cl_command_queue ioq = clCreateCommandQueue(ctx,dev.GetDeviceID(),IOQtype,&status);
+
+	clContext Context(dev,ctx,q,ioq,status);
+	return Context;
+}
+
 
 clContext OpenCL::MakeContext(clDevice& dev, Queue::QueueType Qtype)
 {

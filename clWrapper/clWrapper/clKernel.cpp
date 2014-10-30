@@ -7,9 +7,19 @@ clEvent clKernel::operator()(clWorkGroup Global)
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
+		// Data is being written to an input type, wait for it to finish
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
 			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e.isSet())
+			{
+				eventwaitlist.push_back(e.event);
+			}
+		}
+		// Current data is presently being retrieved (don't overwrite yet)
+		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
+		{
+			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
 			if (e.isSet())
 			{
 				eventwaitlist.push_back(e.event);
@@ -40,12 +50,22 @@ clEvent clKernel::operator()(clWorkGroup Global, clEvent StartEvent)
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
+		// Data is being written to an input type, wait for it to finish
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
-			if (e!=NULL)
+			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e.isSet())
 			{
-				eventwaitlist.push_back(e);
+				eventwaitlist.push_back(e.event);
+			}
+		}
+		// Current data is presently being retrieved (don't overwrite yet)
+		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
+		{
+			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e.isSet())
+			{
+				eventwaitlist.push_back(e.event);
 			}
 		}
 	}
@@ -74,12 +94,22 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
+		// Data is being written to an input type, wait for it to finish
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
-			if (e!=NULL)
+			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e.isSet())
 			{
-				eventwaitlist.push_back(e);
+				eventwaitlist.push_back(e.event);
+			}
+		}
+		// Current data is presently being retrieved (don't overwrite yet)
+		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
+		{
+			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e.isSet())
+			{
+				eventwaitlist.push_back(e.event);
 			}
 		}
 	}
@@ -106,12 +136,22 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEvent Star
 	// Check callbacks for any input types... need to wait on there write events..
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{
-		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput)
+		// Data is being written to an input type, wait for it to finish
+		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			cl_event e = Callbacks[arg]->GetFinishedWriteEvent().event;
-			if (e!=NULL)
+			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e.isSet())
 			{
-				eventwaitlist.push_back(e);
+				eventwaitlist.push_back(e.event);
+			}
+		}
+		// Current data is presently being retrieved (don't overwrite yet)
+		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
+		{
+			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e.isSet())
+			{
+				eventwaitlist.push_back(e.event);
 			}
 		}
 	}
@@ -140,6 +180,10 @@ void clKernel::RunCallbacks(clEvent KernelFinished)
 		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput)
 		{
 			Callbacks[arg]->Update(KernelFinished);
+		}
+		else if(ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
+		{
+			Callbacks[arg]->UpdateEventOnly(KernelFinished);
 		}
 	}
 }
