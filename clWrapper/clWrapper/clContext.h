@@ -78,6 +78,5 @@ public:
 		MemList.push_back(rec);
 		return Mem;
 	};
-
 };
 #endif

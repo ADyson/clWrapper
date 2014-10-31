@@ -52,10 +52,16 @@ std::list<clDevice> OpenCL::GetDeviceList()
 			clDevice newDev(devices[i][j],i,j,pName,Misc::Trim(dName));         
 			DeviceList.push_back(newDev);
 		}
+
 		free(Pvalue);
 	}
 
 	free(platforms);
+	
+	for (int i = 0; i < numPlatforms; i++) 
+	{
+		free(devices[i]);
+	}
 
 	return DeviceList;
 };

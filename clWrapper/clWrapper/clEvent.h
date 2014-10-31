@@ -9,6 +9,7 @@ class clEvent
 	bool hasBeenSet;
 public:
 	clEvent(): hasBeenSet(false){};
+	//~clEvent(){ if(isSet()){ clReleaseEvent(event); }};
 	cl_event event;
 	
 	bool isSet(){ return hasBeenSet;};
