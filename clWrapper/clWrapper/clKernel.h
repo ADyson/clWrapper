@@ -13,14 +13,15 @@
 
 namespace ArgumentType
 {
+	// Unspecified first so containers will default to this value.
 	enum ArgTypes
 	{
+		Unspecified,
 		Input,
 		Output,
 		InputOutput,
 		OutputNoUpdate,
-		InputOutputNoUpdate,
-		Unspecified
+		InputOutputNoUpdate
 	};
 };
 
@@ -62,7 +63,9 @@ public:
 			Name = Copy.Name;
 			CodeString = Copy.CodeString;
 			NotDefault = Copy.NotDefault;
+			ArgType.clear();
 			ArgType.resize(NumberOfArgs);
+			Callbacks.clear();
 			Callbacks.resize(NumberOfArgs);
 			BuildKernelFromString(CodeString,Name,NumberOfArgs);
 		}
@@ -72,7 +75,9 @@ public:
 	clKernel(const clKernel& Copy): Context(Copy.Context), NumberOfArgs(Copy.NumberOfArgs), Name(Copy.Name), CodeString(Copy.CodeString)
 	{
 		NotDefault = Copy.NotDefault;
+		ArgType.clear();
 		ArgType.resize(NumberOfArgs);
+		Callbacks.clear();
 		Callbacks.resize(NumberOfArgs);
 		BuildKernelFromString(CodeString,Name,NumberOfArgs);
 	}
