@@ -5,20 +5,23 @@
 #include "clEvent.h"
 #include "Cl/Opencl.h"
 #include "clWorkgroup.h"
+#include <algorithm>
+#include <utility>
 
 // Optionally passed to argument setting.
 // Output types will be updated automatically when data is modified
 
 namespace ArgumentType
 {
+	// Unspecified first so containers will default to this value.
 	enum ArgTypes
 	{
+		Unspecified,
 		Input,
 		Output,
 		InputOutput,
 		OutputNoUpdate,
-		InputOutputNoUpdate,
-		Unspecified
+		InputOutputNoUpdate
 	};
 };
 
@@ -32,14 +35,17 @@ public:
 		cl_int Status;
 	};
 
-	clKernel(){};
+	clKernel(){ NotDefault = false; }
+	~clKernel(){ if(NotDefault) { clReleaseProgram(Program); clReleaseKernel(Kernel); } }
 
 	clKernel(clContext &_context, const char* codestring, int _NumberOfArgs, std::string _name)
 		: Context(&_context), NumberOfArgs(_NumberOfArgs), Name(_name)
 	{
+		NotDefault = true;
 		ArgType.resize(_NumberOfArgs);
 		Callbacks.resize(_NumberOfArgs);
 		BuildKernelFromString(codestring,_name,NumberOfArgs);
+		CodeString = codestring;
 	}
 
 	// Can enter arguments as literals now...
@@ -47,6 +53,33 @@ public:
 	{
 		ArgType[position] = ArgumentType;
 		status |= clSetKernelArg(Kernel,position,sizeof(T),&arg);
+	}
+
+	clKernel& operator=(clKernel& Copy){
+		if(this!=&Copy)
+		{
+			Context = Copy.Context;
+			NumberOfArgs = Copy.NumberOfArgs;
+			Name = Copy.Name;
+			CodeString = Copy.CodeString;
+			NotDefault = Copy.NotDefault;
+			ArgType.clear();
+			ArgType.resize(NumberOfArgs);
+			Callbacks.clear();
+			Callbacks.resize(NumberOfArgs);
+			BuildKernelFromString(CodeString,Name,NumberOfArgs);
+		}
+		return *this;
+	}
+
+	clKernel(const clKernel& Copy): Context(Copy.Context), NumberOfArgs(Copy.NumberOfArgs), Name(Copy.Name), CodeString(Copy.CodeString)
+	{
+		NotDefault = Copy.NotDefault;
+		ArgType.clear();
+		ArgType.resize(NumberOfArgs);
+		Callbacks.clear();
+		Callbacks.resize(NumberOfArgs);
+		BuildKernelFromString(CodeString,Name,NumberOfArgs);
 	}
 
 	// Overload for OpenCL Memory Buffers
@@ -67,10 +100,11 @@ public:
 	clEvent operator()(clWorkGroup Global, clWorkGroup Local);
 	clEvent operator()(clWorkGroup Global, clWorkGroup Local, clEvent StartEvent);
 	
-	cl_int GetStatus(){return status; };
+	cl_int GetStatus(){ return status; };
 	int NumberOfArgs;
 
 private:
+	bool NotDefault;
 	cl_int status;
 	std::vector<ArgumentType::ArgTypes> ArgType;
 	std::vector<Notify*> Callbacks;
@@ -78,6 +112,18 @@ private:
 	cl_program Program;
 	cl_kernel Kernel;
 	std::string Name;
+	const char* CodeString;
+	
+	void swap(clKernel& first, clKernel& second)
+	{
+		std::swap(first.NotDefault,second.NotDefault);
+		std::swap(first.Program,second.Program);
+		std::swap(first.Kernel,second.Kernel);
+		std::swap(first.Context,second.Context);
+		std::swap(first.ArgType,second.ArgType);
+		std::swap(first.Callbacks,second.Callbacks);
+		std::swap(first.Name,second.Name);
+	}
 
 	void RunCallbacks(clEvent KernelFinished);
 	void BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);

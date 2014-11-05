@@ -8,26 +8,18 @@
 
 BOOST_AUTO_TEST_CASE(FindsSomeDevices)
 {
-	//auto list = OpenCL::GetDeviceList();
-	//std::for_each(list.begin(),list.end(),[](clDevice dev ){printf(dev.GetDeviceName().c_str()+"\n");});
-
     BOOST_REQUIRE_GT(OpenCL::GetDeviceList().size(),0);
 }
 
 BOOST_AUTO_TEST_CASE(CanCreateContext)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	
-	clDevice GPU = *DevList.begin();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
 	BOOST_REQUIRE_EQUAL(GPUContext.GetStatus(),0);
 }
 
 BOOST_AUTO_TEST_CASE(CanAllocateBuffers)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
 	
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);	
 	std::vector<float> loc = GPUBuffer->GetLocal();
@@ -39,9 +31,7 @@ BOOST_AUTO_TEST_CASE(CanAllocateBuffers)
 
 BOOST_AUTO_TEST_CASE(CanCompileKernel)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
 	
 	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
 "{		\n"
@@ -61,9 +51,7 @@ BOOST_AUTO_TEST_CASE(CanCompileKernel)
 
 BOOST_AUTO_TEST_CASE(CanSetArguments)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
 	
 	std::vector<boost::shared_ptr<clMemory<float,Auto>>> Buffers;
 	Buffers.push_back(GPUContext.CreateBuffer<float,Auto>(1024));
@@ -83,7 +71,7 @@ BOOST_AUTO_TEST_CASE(CanSetArguments)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,Buffers[0],ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,Buffers[0],ArgumentType::InputOutputNoUpdate);
 
 	BOOST_REQUIRE_EQUAL(GPUKernel.GetStatus(),0);
 	BOOST_REQUIRE_EQUAL(GPUContext.GetStatus(),0);
@@ -91,9 +79,7 @@ BOOST_AUTO_TEST_CASE(CanSetArguments)
 
 BOOST_AUTO_TEST_CASE(CanEnqueueKernel)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
 	
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 
@@ -111,7 +97,7 @@ BOOST_AUTO_TEST_CASE(CanEnqueueKernel)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -127,12 +113,9 @@ BOOST_AUTO_TEST_CASE(CanEnqueueKernel)
 
 BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrder);
-	
-	clMemory<float,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
 
+	clMemory<float,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 	std::vector<float> InitialData = std::vector<float>(1024,6.23f);
 	GPUBuffer->Write(InitialData);
 
@@ -150,7 +133,7 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -167,9 +150,8 @@ BOOST_AUTO_TEST_CASE(CanUploadDataToGPU)
 }
 BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList());
+
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 
 	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
@@ -188,7 +170,7 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -203,9 +185,7 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 
 BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 {
-	std::list<clDevice> DevList = OpenCL::GetDeviceList();
-	clDevice GPU = DevList.front();
-	clContext GPUContext = OpenCL::MakeContext(GPU,Queue::InOrderWithProfiling);
+	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList(),Queue::InOrderWithProfiling);
 	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
 	
 	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
@@ -224,7 +204,7 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 
 	clKernel GPUKernel(GPUContext,TestSource,4,"clTest");
 
-	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	GPUKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	GPUKernel.SetArg(1,1024);
 	GPUKernel.SetArg(2,1);
 	GPUKernel.SetArg(3,5.0f);
@@ -306,12 +286,12 @@ BOOST_AUTO_TEST_CASE(KernelCanBeCopied)
 	DummyKernel = GPUKernel;
 	clKernel DummyKernel2(DummyKernel);
 
-	DummyKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	DummyKernel.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	DummyKernel.SetArg(1,1024);
 	DummyKernel.SetArg(2,1024);
 	DummyKernel.SetArg(3,5.0f);
 
-	DummyKernel2.SetArg(0,GPUBuffer,ArgumentType::InputOutput);
+	DummyKernel2.SetArg(0,GPUBuffer,ArgumentType::InputOutputNoUpdate);
 	DummyKernel2.SetArg(1,1024);
 	DummyKernel2.SetArg(2,1024);
 	DummyKernel2.SetArg(3,5.0f);

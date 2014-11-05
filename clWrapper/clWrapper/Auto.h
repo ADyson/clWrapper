@@ -10,12 +10,13 @@
 template <class T> class Auto abstract : public Notify
 {
 public:
-	Auto<T>(size_t size): Size(size), isAuto(true){
+	Auto<T>(size_t size): Size(size), isAuto(true), isUpToDate(true){
 		Local.resize(0);
 	};
 
 	size_t Size;
 	bool isAuto;
+	bool isUpToDate;
 
 	// Reading directly from Local is unadvised as it will be updated whenever the kernel 
 	// actually completes which is not in general, directly after it has been called as kernel
@@ -36,9 +37,23 @@ public:
 	// an event before updating itself.
 	std::vector<T>& GetLocal()
 	{	
+		clEvent es = GetStartReadEvent();
 		clEvent e = GetFinishedReadEvent();
-		if(e.isSet())
-			clWaitForEvents(1,&e.event);
+
+		if(es.isSet())
+			es.Wait();
+
+		if(isUpToDate == false) 
+		{
+			Update(es);
+			isUpToDate = true;
+
+			if((es = GetFinishedReadEvent()).isSet())
+				es.Wait();
+		} 
+		else if(e.isSet()) 
+			e.Wait();
+
 		return Local;
 	};
 
@@ -49,10 +64,12 @@ public:
 		if(Local.empty() == true || Local.size() != Size)
 			Local.resize(Size);
 		Read(Local,KernelFinished);
+		isUpToDate = true;
 	}
 
 	void UpdateEventOnly(clEvent KernelFinished)
 	{
+		isUpToDate = false;
 		SetFinishedEvent(KernelFinished);
 	};
 };

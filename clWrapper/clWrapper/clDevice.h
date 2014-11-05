@@ -20,6 +20,7 @@ class clDevice
 	clDevice(){};
 	clDevice(cl_device_id devID, int platNum, int devNum, std::string platName, std::string devName )
 		: deviceID(devID), deviceNum(devNum), platformNum(platNum), platformname(platName), devicename(devName){};
+	~clDevice(){ clReleaseDevice(deviceID); }
 
 	cl_device_id& GetDeviceID(){ return deviceID; };
 	std::string GetDeviceName(){ return devicename; };
