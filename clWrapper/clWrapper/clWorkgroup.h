@@ -4,7 +4,9 @@
 // Specifiy number of threads to launch
 class clWorkGroup
 {
-	public:
+private:
+	size_t worksize[3];
+public:
 	clWorkGroup(unsigned int x, unsigned int y, unsigned int z)
 	{
 		worksize[0] = x;
@@ -19,7 +21,9 @@ class clWorkGroup
 		worksize[2] = workgroupsize[2];
 	};
 
-	size_t worksize[3];
+	size_t* GetSize(){return worksize;};
+
+	
 };
 
 #endif

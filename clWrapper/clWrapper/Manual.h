@@ -7,13 +7,16 @@
 // This class is inherited by OpenCL memory buffers that have to manage there own memory lifetimes.
 template <class T> class Manual abstract : public Notify
 {
-public:
-	Manual<T>(size_t size): Size(size), isAuto(false) {};
+private:
 	const bool isAuto;
 	size_t Size;
 	clEventPtr KernelFinished;
-	void Update(clEventPtr _KernelFinished){KernelFinished = _KernelFinished;};
 
+public:
+	Manual<T>(size_t size): Size(size), isAuto(false) {};
+
+	bool IsAuto(){ return isAuto; };
+	void Update(clEventPtr _KernelFinished){KernelFinished = _KernelFinished;};
 	virtual clEventPtr Read(std::vector<T>&data)=0;
 	virtual clEventPtr Read(std::vector<T>&data,clEventPtr KernelFinished)=0;
 	virtual clEventPtr GetStartWriteEvent()=0;
@@ -28,7 +31,7 @@ public:
 	std::vector<T> CreateLocalCopy()
 	{
 		std::vector<T> Local(Size);
-		if(KernelFinished->event!=NULL)
+		if(KernelFinished->GetEvent()!=NULL)
 		{
 			clEventPtr e =	Read(Local,KernelFinished);
 			e->Wait();

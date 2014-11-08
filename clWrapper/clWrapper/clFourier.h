@@ -24,6 +24,7 @@ namespace Direction
 
 class clFourier
 {
+private:
 	clContext* Context;
 	clfftStatus fftStatus;
 	clfftSetupData fftSetupData;
@@ -69,25 +70,25 @@ public:
 		
 		if (e->isSet())
 		{
-			eventwaitlist.push_back(e->event);
+			eventwaitlist.push_back(e->GetEvent());
 		}
 		if (e2->isSet())
 		{
-			eventwaitlist.push_back(e2->event);
+			eventwaitlist.push_back(e2->GetEvent());
 		}
 
 		clEventPtr finished(new clEvent);
 
 		if(buffersize)
-			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished->event, 
+			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished->GetEvent(), 
 				&input->GetBuffer(), &output->GetBuffer(), clMedBuffer->GetBuffer() );
 		else
-			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished->event, 
+			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished->GetEvent(), 
 				&input->GetBuffer(), &output->GetBuffer(), NULL );
 	
 		finished->Set();
 
-		if(output->isAuto)
+		if(output->IsAuto())
 			output->Update(finished);
 
 		return finished;

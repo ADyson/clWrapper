@@ -45,7 +45,7 @@ public:
 	clEventPtr Read(std::vector<T> &data)
 	{
 		FinishedReadEvent.reset(new clEvent());
-		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent->event);
+		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent->GetEvent());
 		FinishedReadEvent->Set();
 		return FinishedReadEvent;
 	};
@@ -55,7 +55,7 @@ public:
 	{
 		StartReadEvent = Start;
 		FinishedReadEvent.reset(new clEvent());
-		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->event,&FinishedReadEvent->event);
+		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->GetEvent(),&FinishedReadEvent->GetEvent());
 		FinishedReadEvent->Set();
 		return FinishedReadEvent;
 	};
@@ -63,7 +63,7 @@ public:
 	clEventPtr Write(std::vector<T> &data)
 	{
 		FinishedWriteEvent.reset(new clEvent());
-		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent->event);
+		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent->GetEvent());
 		FinishedWriteEvent->Set();
 		return FinishedWriteEvent;
 	};
@@ -73,7 +73,7 @@ public:
 	{
 		StartWriteEvent = Start;
 		FinishedWriteEvent.reset(new clEvent());
-		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->event,&FinishedWriteEvent->event);
+		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->GetEvent(),&FinishedWriteEvent->GetEvent());
 		FinishedWriteEvent->Set();
 		return FinishedWriteEvent;
 	};
@@ -95,6 +95,7 @@ public:
 
 private:
 	clMemory<T,AutoPolicy>& operator= (const clMemory<T,AutoPolicy>& other){};
+	
 	void Release()
 	{
 		if(Buffer) // Does this work?

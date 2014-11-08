@@ -13,7 +13,7 @@ clEventPtr clKernel::operator()(clWorkGroup Global)
 			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
@@ -22,13 +22,13 @@ clEventPtr clKernel::operator()(clWorkGroup Global)
 			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 	}
 
 	clEventPtr KernelFinished(new clEvent);
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished->event);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.GetSize(),NULL,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished->GetEvent());
 	KernelFinished->Set();
 
 	if(!status==0)
@@ -56,7 +56,7 @@ clEventPtr clKernel::operator()(clWorkGroup Global, clEventPtr StartEvent)
 			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
@@ -65,15 +65,15 @@ clEventPtr clKernel::operator()(clWorkGroup Global, clEventPtr StartEvent)
 			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 	}
 
-	eventwaitlist.push_back(StartEvent->event);
+	eventwaitlist.push_back(StartEvent->GetEvent());
 
 	clEventPtr KernelFinished(new clEvent);
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished->event);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.GetSize(),NULL,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished->GetEvent());
 
 	if(!status==0)
 	{
@@ -100,7 +100,7 @@ clEventPtr clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
@@ -109,13 +109,13 @@ clEventPtr clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 	}
 
 	clEventPtr KernelFinished(new clEvent);
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,Local.worksize,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished->event);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.GetSize(),Local.GetSize(),eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished->GetEvent());
 
 	if(!status==0)
 	{
@@ -142,7 +142,7 @@ clEventPtr clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEventPt
 			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
@@ -151,15 +151,15 @@ clEventPtr clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEventPt
 			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
 			if (e->isSet())
 			{
-				eventwaitlist.push_back(e->event);
+				eventwaitlist.push_back(e->GetEvent());
 			}
 		}
 	}
 
-	eventwaitlist.push_back(StartEvent->event);
+	eventwaitlist.push_back(StartEvent->GetEvent());
 
 	clEventPtr KernelFinished(new clEvent);
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,Local.worksize,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished->event);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.GetSize(),Local.GetSize(),eventwaitlist.size(),&eventwaitlist[0],&KernelFinished->GetEvent());
 
 	if(!status==0)
 	{

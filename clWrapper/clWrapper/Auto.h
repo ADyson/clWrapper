@@ -9,11 +9,7 @@
 // from kernels with argument types specified.
 template <class T> class Auto abstract : public Notify
 {
-public:
-	Auto<T>(size_t size): Size(size), isAuto(true), isUpToDate(true){
-		Local.resize(0);
-	};
-
+private:
 	size_t Size;
 	bool isAuto;
 	bool isUpToDate;
@@ -22,6 +18,11 @@ public:
 	// actually completes which is not in general, directly after it has been called as kernel
 	// enqueue is non blocking. Use GetLocal() to force waiting for current version.
 	std::vector<T> Local;
+
+public:
+	Auto<T>(size_t size): Size(size), isAuto(true), isUpToDate(true){
+		Local.resize(0);
+	};
 
 	virtual clEventPtr Read(std::vector<T>&data)=0;
 	virtual clEventPtr Read(std::vector<T>&data,clEventPtr KernelFinished)=0;
@@ -32,6 +33,8 @@ public:
 	virtual clEventPtr GetFinishedReadEvent()=0;
 
 	virtual void SetFinishedEvent(clEventPtr KernelFinished) =0;
+
+	bool IsAuto(){ return isAuto; };
 	
 	// This call will block if the Memory is currently waiting on
 	// an event before updating itself.
