@@ -83,7 +83,7 @@ public:
 	}
 
 	// Overload for OpenCL Memory Buffers
-	template <class T, template <class> class AutoPolicy> void SetArg(int position, boost::shared_ptr<clMemory<T,AutoPolicy>>& arg, ArgumentType::ArgTypes ArgumentType = Unspecified)
+	template <class T, template <class> class AutoPolicy> void SetArg(int position, boost::shared_ptr<clMemory<T,AutoPolicy>>& arg, ArgumentType::ArgTypes ArgumentType = ArgumentType::InputOutput)
 	{
 		ArgType[position] = ArgumentType;
 		Callbacks[position] = arg.get();

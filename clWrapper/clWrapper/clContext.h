@@ -40,13 +40,15 @@ public:
 		: ContextDevice(_ContextDevice), Context(_Context), Queue(_Queue), IOQueue(_IOQueue), Status(_Status){};
 
 	void WaitForQueueFinish(){clFinish(Queue);};
+	void WaitForIOQueueFinish(){clFinish(IOQueue);};
 	void QueueFlush(){clFlush(Queue);};
+	void IOQueueFlush(){clFlush(Queue);};
 
 	clDevice GetContextDevice(){return ContextDevice;};
 	cl_context& GetContext(){return Context;};
 	cl_int GetStatus(){return Status;};
+	cl_command_queue& GetIOQueue(){ return IOQueue; };
 	cl_command_queue& GetQueue(){ return Queue; };
-	virtual cl_command_queue& GetIOQueue(){return IOQueue;};
 
 	size_t GetOccupiedMemorySize()
 	{
