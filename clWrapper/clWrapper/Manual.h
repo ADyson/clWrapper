@@ -11,37 +11,37 @@ public:
 	Manual<T>(size_t size): Size(size), isAuto(false) {};
 	const bool isAuto;
 	size_t Size;
-	clEvent KernelFinished;
-	void Update(clEvent _KernelFinished){KernelFinished = _KernelFinished;};
+	clEventPtr KernelFinished;
+	void Update(clEventPtr _KernelFinished){KernelFinished = _KernelFinished;};
 
-	virtual clEvent Read(std::vector<T>&data)=0;
-	virtual clEvent Read(std::vector<T>&data,clEvent KernelFinished)=0;
-	virtual clEvent GetStartWriteEvent()=0;
-	virtual clEvent GetStartReadEvent()=0;
-	virtual clEvent GetFinishedWriteEvent()=0;
-	virtual clEvent GetFinishedReadEvent()=0;
+	virtual clEventPtr Read(std::vector<T>&data)=0;
+	virtual clEventPtr Read(std::vector<T>&data,clEventPtr KernelFinished)=0;
+	virtual clEventPtr GetStartWriteEvent()=0;
+	virtual clEventPtr GetStartReadEvent()=0;
+	virtual clEventPtr GetFinishedWriteEvent()=0;
+	virtual clEventPtr GetFinishedReadEvent()=0;
 
-	virtual void SetFinishedEvent(clEvent KernelFinished) =0;
+	virtual void SetFinishedEvent(clEventPtr KernelFinished) =0;
 
 	// This will create a vector filled with the current contents of the memory
 	// Will block until the read has been completed
 	std::vector<T> CreateLocalCopy()
 	{
 		std::vector<T> Local(Size);
-		if(KernelFinished.event!=NULL)
+		if(KernelFinished->event!=NULL)
 		{
-			clEvent e =	Read(Local,KernelFinished);
-			clWaitForEvents(1,&e.event);
+			clEventPtr e =	Read(Local,KernelFinished);
+			e->Wait();
 		}
 		else
 		{
-			clEvent e =Read(Local);
-			clWaitForEvents(1,&e.event);
+			clEventPtr e =Read(Local);
+			e->Wait();
 		}
 		return Local;
 	};
 
-	void UpdateEventOnly(clEvent KernelFinished)
+	void UpdateEventOnly(clEventPtr KernelFinished)
 	{
 		SetFinishedEvent(KernelFinished);
 	};

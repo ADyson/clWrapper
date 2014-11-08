@@ -21,6 +21,15 @@ private:
 	clContext* Context;
 	MemoryRecord* Rec;
 
+	// Will wait for this event to complete before performing read.
+	clEventPtr StartReadEvent;
+	// This event signifies a read has been performed.
+	clEventPtr FinishedReadEvent;
+	// This event will be completed after we write to this memory.
+	clEventPtr FinishedWriteEvent;
+	// Write will not begin until this event is completed.
+	clEventPtr StartWriteEvent;
+
 public:
 	typedef boost::shared_ptr<clMemory<T,AutoPolicy>> Ptr;
 	friend class clContext;
@@ -28,58 +37,53 @@ public:
 	cl_mem& GetBuffer(){ return Buffer; };
 	size_t	GetSize(){ return Size*sizeof(MemType); };
 	
-	// Will wait for this event to complete before performing read.
-	clEvent StartReadEvent;
-	// This event signifies a read has been performed.
-	clEvent FinishedReadEvent;
-	// This event will be completed after we write to this memory.
-	clEvent FinishedWriteEvent;
-	// Write will not begin until this event is completed.
-	clEvent StartWriteEvent;
-
-	virtual clEvent GetFinishedWriteEvent(){return FinishedWriteEvent;};
-	virtual clEvent GetFinishedReadEvent(){return FinishedReadEvent;};
-	virtual clEvent GetStartWriteEvent(){return StartWriteEvent;};
-	virtual clEvent GetStartReadEvent(){return StartReadEvent;};
+	virtual clEventPtr GetFinishedWriteEvent(){return FinishedWriteEvent;};
+	virtual clEventPtr GetFinishedReadEvent(){return FinishedReadEvent;};
+	virtual clEventPtr GetStartWriteEvent(){return StartWriteEvent;};
+	virtual clEventPtr GetStartReadEvent(){return StartReadEvent;};
 			
-	clEvent Read(std::vector<T> &data)
+	clEventPtr Read(std::vector<T> &data)
 	{
-		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent.event);
-		FinishedReadEvent.Set();
+		FinishedReadEvent.reset(new clEvent());
+		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedReadEvent->event);
+		FinishedReadEvent->Set();
 		return FinishedReadEvent;
 	};
 
 	// Wait on single event before reading
-	clEvent Read(std::vector<T> &data, clEvent Start)
+	clEventPtr Read(std::vector<T> &data, clEventPtr Start)
 	{
 		StartReadEvent = Start;
-		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedReadEvent.event);
-		FinishedReadEvent.Set();
+		FinishedReadEvent.reset(new clEvent());
+		clEnqueueReadBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->event,&FinishedReadEvent->event);
+		FinishedReadEvent->Set();
 		return FinishedReadEvent;
 	};
 
-	clEvent Write(std::vector<T> &data)
+	clEventPtr Write(std::vector<T> &data)
 	{
-		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent.event);
-		FinishedWriteEvent.Set();
+		FinishedWriteEvent.reset(new clEvent());
+		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent->event);
+		FinishedWriteEvent->Set();
 		return FinishedWriteEvent;
 	};
 
 	// Wait on single event before writing.
-	clEvent Write(std::vector<T> &data, clEvent Start)
+	clEventPtr Write(std::vector<T> &data, clEventPtr Start)
 	{
 		StartWriteEvent = Start;
-		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start.event,&FinishedWriteEvent.event);
-		FinishedWriteEvent.Set();
+		FinishedWriteEvent.reset(new clEvent());
+		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->event,&FinishedWriteEvent->event);
+		FinishedWriteEvent->Set();
 		return FinishedWriteEvent;
 	};
 
 	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer, MemoryRecord* rec) : Context(context), Buffer(buffer), Size(size), 
-		AutoPolicy<T>(size), FinishedReadEvent(), FinishedWriteEvent(), StartReadEvent(), StartWriteEvent(), Rec(rec){};
+		AutoPolicy<T>(size), FinishedReadEvent(new clEvent), FinishedWriteEvent(new clEvent), StartReadEvent(new clEvent), StartWriteEvent(new clEvent), Rec(rec){};
 	//clMemory<T,AutoPolicy>(const clMemory<T,AutoPolicy>& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
 	//,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){};
 
-	void SetFinishedEvent(clEvent KernelFinished)
+	void SetFinishedEvent(clEventPtr KernelFinished)
 	{
 		StartReadEvent = KernelFinished;
 	};

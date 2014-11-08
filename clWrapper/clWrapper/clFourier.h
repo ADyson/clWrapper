@@ -56,32 +56,36 @@ public:
 
 	~clFourier(void);
 	template <class T, template <class> class AutoPolicy, template <class> class AutoPolicy2> 
-	clEvent operator()(boost::shared_ptr<clMemory<T,AutoPolicy2>>& input, boost::shared_ptr<clMemory<T,AutoPolicy>>& output, Direction::TransformDirection Direction)
+	clEventPtr operator()(boost::shared_ptr<clMemory<T,AutoPolicy2>>& input, boost::shared_ptr<clMemory<T,AutoPolicy>>& output, Direction::TransformDirection Direction)
 	{
 		clfftDirection Dir = (Direction == Direction::Forwards) ? CLFFT_FORWARD : CLFFT_BACKWARD;
 		
 		std::vector<cl_event> eventwaitlist;
-		clEvent e = input->GetFinishedWriteEvent();
-		clEvent e2 = input->GetFinishedReadEvent();
-		if (e.isSet())
+		
+		// TODO: wrap this to allow for freeing up events after something has waited for them.
+		
+		clEventPtr e = input->GetFinishedWriteEvent();
+		clEventPtr e2 = input->GetFinishedReadEvent();
+		
+		if (e->isSet())
 		{
-			eventwaitlist.push_back(e.event);
+			eventwaitlist.push_back(e->event);
 		}
-		if (e2.isSet())
+		if (e2->isSet())
 		{
-			eventwaitlist.push_back(e2.event);
+			eventwaitlist.push_back(e2->event);
 		}
 
-		clEvent finished;
+		clEventPtr finished(new clEvent);
 
 		if(buffersize)
-			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished.event, 
+			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished->event, 
 				&input->GetBuffer(), &output->GetBuffer(), clMedBuffer->GetBuffer() );
 		else
-			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished.event, 
+			fftStatus = clfftEnqueueTransform( fftplan, Dir, 1, &Context->GetQueue(), eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL, &finished->event, 
 				&input->GetBuffer(), &output->GetBuffer(), NULL );
 	
-		finished.Set();
+		finished->Set();
 
 		if(output->isAuto)
 			output->Update(finished);

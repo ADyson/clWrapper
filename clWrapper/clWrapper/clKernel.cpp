@@ -1,6 +1,6 @@
 #include "clKernel.h"
 
-clEvent clKernel::operator()(clWorkGroup Global)
+clEventPtr clKernel::operator()(clWorkGroup Global)
 {
 	std::vector<cl_event> eventwaitlist;
 
@@ -10,26 +10,26 @@ clEvent clKernel::operator()(clWorkGroup Global)
 		// Data is being written to an input type, wait for it to finish
 		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
 		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
 		{
-			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 	}
 
-	clEvent KernelFinished;
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished.event);
-	KernelFinished.Set();
+	clEventPtr KernelFinished(new clEvent);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished->event);
+	KernelFinished->Set();
 
 	if(!status==0)
 	{
@@ -43,7 +43,7 @@ clEvent clKernel::operator()(clWorkGroup Global)
 	return KernelFinished;
 }
 
-clEvent clKernel::operator()(clWorkGroup Global, clEvent StartEvent)
+clEventPtr clKernel::operator()(clWorkGroup Global, clEventPtr StartEvent)
 {
 	std::vector<cl_event> eventwaitlist;
 
@@ -53,27 +53,27 @@ clEvent clKernel::operator()(clWorkGroup Global, clEvent StartEvent)
 		// Data is being written to an input type, wait for it to finish
 		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
 		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
 		{
-			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 	}
 
-	eventwaitlist.push_back(StartEvent.event);
+	eventwaitlist.push_back(StartEvent->event);
 
-	clEvent KernelFinished;
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished.event);
+	clEventPtr KernelFinished(new clEvent);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,NULL,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished->event);
 
 	if(!status==0)
 	{
@@ -87,7 +87,7 @@ clEvent clKernel::operator()(clWorkGroup Global, clEvent StartEvent)
 	return KernelFinished;
 }
 
-clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
+clEventPtr clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 {
 	std::vector<cl_event> eventwaitlist;
 
@@ -97,25 +97,25 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 		// Data is being written to an input type, wait for it to finish
 		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
 		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
 		{
-			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 	}
 
-	clEvent KernelFinished;
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,Local.worksize,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished.event);
+	clEventPtr KernelFinished(new clEvent);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,Local.worksize,eventwaitlist.size(),eventwaitlist.size() ? &eventwaitlist[0] : NULL,&KernelFinished->event);
 
 	if(!status==0)
 	{
@@ -129,7 +129,7 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local)
 	return KernelFinished;
 }
 
-clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEvent StartEvent)
+clEventPtr clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEventPtr StartEvent)
 {
 	std::vector<cl_event> eventwaitlist;
 
@@ -139,27 +139,27 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEvent Star
 		// Data is being written to an input type, wait for it to finish
 		if(ArgType[arg] == ArgumentType::Input || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::InputOutputNoUpdate )
 		{
-			clEvent e = Callbacks[arg]->GetFinishedWriteEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedWriteEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 		// Current data is presently being retrieved (don't overwrite yet)
 		if(ArgType[arg] == ArgumentType::Output || ArgType[arg] == ArgumentType::InputOutput || ArgType[arg] == ArgumentType::OutputNoUpdate || ArgType[arg] == ArgumentType::InputOutputNoUpdate)
 		{
-			clEvent e = Callbacks[arg]->GetFinishedReadEvent();
-			if (e.isSet())
+			clEventPtr e = Callbacks[arg]->GetFinishedReadEvent();
+			if (e->isSet())
 			{
-				eventwaitlist.push_back(e.event);
+				eventwaitlist.push_back(e->event);
 			}
 		}
 	}
 
-	eventwaitlist.push_back(StartEvent.event);
+	eventwaitlist.push_back(StartEvent->event);
 
-	clEvent KernelFinished;
-	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,Local.worksize,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished.event);
+	clEventPtr KernelFinished(new clEvent);
+	status = clEnqueueNDRangeKernel(Context->GetQueue(),Kernel,2,NULL,Global.worksize,Local.worksize,eventwaitlist.size(),&eventwaitlist[0],&KernelFinished->event);
 
 	if(!status==0)
 	{
@@ -173,7 +173,7 @@ clEvent clKernel::operator()(clWorkGroup Global, clWorkGroup Local, clEvent Star
 	return KernelFinished;
 }
 
-void clKernel::RunCallbacks(clEvent KernelFinished)
+void clKernel::RunCallbacks(clEventPtr KernelFinished)
 {
 	for( int arg = 0 ; arg < NumberOfArgs ; arg++)
 	{

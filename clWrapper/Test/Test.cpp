@@ -210,9 +210,9 @@ BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 	GPUKernel.SetArg(3,5.0f);
 
 	clWorkGroup Work(1024,1,1);
-	clEvent profile = GPUKernel(Work);
+	clEventPtr profile = GPUKernel(Work);
 
-	cl_ulong time = profile.GetElapsedTime();
+	cl_ulong time = profile->GetElapsedTime();
 	GPUContext.WaitForQueueFinish();
 
 	BOOST_REQUIRE_GT(time,0);

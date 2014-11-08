@@ -95,10 +95,10 @@ public:
 		status |= clSetKernelArg(Kernel,position,size*sizeof(T),NULL);
 	}
 
-	clEvent operator()(clWorkGroup Global);
-	clEvent operator()(clWorkGroup Global, clEvent StartEvent);
-	clEvent operator()(clWorkGroup Global, clWorkGroup Local);
-	clEvent operator()(clWorkGroup Global, clWorkGroup Local, clEvent StartEvent);
+	clEventPtr operator()(clWorkGroup Global);
+	clEventPtr operator()(clWorkGroup Global, clEventPtr StartEvent);
+	clEventPtr operator()(clWorkGroup Global, clWorkGroup Local);
+	clEventPtr operator()(clWorkGroup Global, clWorkGroup Local, clEventPtr StartEvent);
 	
 	cl_int GetStatus(){ return status; };
 	int NumberOfArgs;
@@ -114,7 +114,7 @@ private:
 	std::string Name;
 	const char* CodeString;
 	
-	void swap(clKernel& first, clKernel& second)
+	/*void swap(clKernel& first, clKernel& second)
 	{
 		std::swap(first.NotDefault,second.NotDefault);
 		std::swap(first.Program,second.Program);
@@ -124,8 +124,9 @@ private:
 		std::swap(first.Callbacks,second.Callbacks);
 		std::swap(first.Name,second.Name);
 	}
+*/
 
-	void RunCallbacks(clEvent KernelFinished);
+	void RunCallbacks(clEventPtr KernelFinished);
 	void BuildKernelFromString(const char* codestring, std::string kernelname, int NumberOfArgs);
 };
 

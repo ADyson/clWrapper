@@ -23,43 +23,43 @@ public:
 	// enqueue is non blocking. Use GetLocal() to force waiting for current version.
 	std::vector<T> Local;
 
-	virtual clEvent Read(std::vector<T>&data)=0;
-	virtual clEvent Read(std::vector<T>&data,clEvent KernelFinished)=0;
+	virtual clEventPtr Read(std::vector<T>&data)=0;
+	virtual clEventPtr Read(std::vector<T>&data,clEventPtr KernelFinished)=0;
 	
-	virtual clEvent GetStartWriteEvent()=0;
-	virtual clEvent GetStartReadEvent()=0;
-	virtual clEvent GetFinishedWriteEvent()=0;
-	virtual clEvent GetFinishedReadEvent()=0;
+	virtual clEventPtr GetStartWriteEvent()=0;
+	virtual clEventPtr GetStartReadEvent()=0;
+	virtual clEventPtr GetFinishedWriteEvent()=0;
+	virtual clEventPtr GetFinishedReadEvent()=0;
 
-	virtual void SetFinishedEvent(clEvent KernelFinished) =0;
+	virtual void SetFinishedEvent(clEventPtr KernelFinished) =0;
 	
 	// This call will block if the Memory is currently waiting on
 	// an event before updating itself.
 	std::vector<T>& GetLocal()
 	{	
-		clEvent es = GetStartReadEvent();
-		clEvent e = GetFinishedReadEvent();
+		clEventPtr es = GetStartReadEvent();
+		clEventPtr e = GetFinishedReadEvent();
 
-		if(es.isSet())
-			es.Wait();
+		if(es->isSet())
+			es->Wait();
 
 		if(isUpToDate == false) 
 		{
 			Update(es);
 			isUpToDate = true;
 
-			if((es = GetFinishedReadEvent()).isSet())
-				es.Wait();
+			if((es = GetFinishedReadEvent())->isSet())
+				es->Wait();
 		} 
-		else if(e.isSet()) 
-			e.Wait();
+		else if(e->isSet()) 
+			e->Wait();
 
 		return Local;
 	};
 
 	// Called by clKernel for Output types to generate automatic
 	// memory updates (non blocking)
-	void Update(clEvent KernelFinished)
+	void Update(clEventPtr KernelFinished)
 	{
 		if(Local.empty() == true || Local.size() != Size)
 			Local.resize(Size);
@@ -67,7 +67,7 @@ public:
 		isUpToDate = true;
 	}
 
-	void UpdateEventOnly(clEvent KernelFinished)
+	void UpdateEventOnly(clEventPtr KernelFinished)
 	{
 		isUpToDate = false;
 		SetFinishedEvent(KernelFinished);
