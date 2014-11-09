@@ -66,6 +66,13 @@ std::list<clDevice> OpenCL::GetDeviceList()
 	return DeviceList;
 };
 
+clDevice OpenCL::GetDeviceByIndex(std::list<clDevice> DeviceList, int index)
+{
+	std::list<clDevice>::iterator it = DeviceList.begin();
+	std::advance(it,index);
+	return (*it);
+};
+
 clContext OpenCL::MakeTwoQueueContext(clDevice& dev, Queue::QueueType Qtype, Queue::QueueType IOQtype)
 {
 	cl_int status;
