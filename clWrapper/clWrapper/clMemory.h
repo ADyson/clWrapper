@@ -17,7 +17,6 @@ class clMemory : public AutoPolicy<T>
 {
 private:
 	cl_mem Buffer;
-	size_t Size;
 	clContext* Context;
 	MemoryRecord* Rec;
 
@@ -35,7 +34,7 @@ public:
 	friend class clContext;
 	typedef T MemType;
 	cl_mem& GetBuffer(){ return Buffer; };
-	size_t	GetSize(){ return Size*sizeof(MemType); };
+	size_t	GetSize(){ return AutoPolicy<T>::GetSize()*sizeof(MemType); };
 	
 	virtual clEventPtr GetFinishedWriteEvent(){return FinishedWriteEvent;};
 	virtual clEventPtr GetFinishedReadEvent(){return FinishedReadEvent;};
@@ -65,6 +64,7 @@ public:
 		FinishedWriteEvent.reset(new clEvent());
 		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],0,NULL,&FinishedWriteEvent->GetEvent());
 		FinishedWriteEvent->Set();
+		isUpToDate = false;
 		return FinishedWriteEvent;
 	};
 
@@ -75,11 +75,19 @@ public:
 		FinishedWriteEvent.reset(new clEvent());
 		clEnqueueWriteBuffer(Context->GetIOQueue(),Buffer,CL_FALSE,0,data.size()*sizeof(T),&data[0],1,&Start->GetEvent(),&FinishedWriteEvent->GetEvent());
 		FinishedWriteEvent->Set();
+		isUpToDate = false;
 		return FinishedWriteEvent;
 	};
 
-	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer, MemoryRecord* rec) : Context(context), Buffer(buffer), Size(size), 
+	clMemory<T,AutoPolicy>(clContext* context, size_t size, cl_mem buffer, MemoryRecord* rec) : Context(context), Buffer(buffer),
 		AutoPolicy<T>(size), FinishedReadEvent(new clEvent), FinishedWriteEvent(new clEvent), StartReadEvent(new clEvent), StartWriteEvent(new clEvent), Rec(rec){};
+
+	clMemory<T,AutoPolicy>(clContext* context, size_t sizex, size_t sizey, cl_mem buffer, MemoryRecord* rec) : Context(context), Buffer(buffer),
+		AutoPolicy<T>(sizex,sizey), FinishedReadEvent(new clEvent), FinishedWriteEvent(new clEvent), StartReadEvent(new clEvent), StartWriteEvent(new clEvent), Rec(rec){};
+
+	clMemory<T,AutoPolicy>(clContext* context, size_t sizex, size_t sizey, size_t sizez, cl_mem buffer, MemoryRecord* rec) : Context(context), Buffer(buffer),
+		AutoPolicy<T>(sizex,sizey,sizez), FinishedReadEvent(new clEvent), FinishedWriteEvent(new clEvent), StartReadEvent(new clEvent), StartWriteEvent(new clEvent), Rec(rec){};
+
 	//clMemory<T,AutoPolicy>(const clMemory<T,AutoPolicy>& RHS) : Context(RHS.Context), Buffer(RHS.Buffer), Size(RHS.Size), AutoPolicy<T>(RHS.Size), StartReadEvent(RHS.StartReadEvent)
 	//,StartWriteEvent(RHS.StartWriteEvent),FinishedReadEvent(RHS.FinishedReadEvent),FinishedWriteEvent(RHS.FinishedWriteEvent){};
 

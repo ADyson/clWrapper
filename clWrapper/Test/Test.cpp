@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(KernelProducesValidResults)
 BOOST_AUTO_TEST_CASE(KernelCanBeProfiled)
 {
 	clContext GPUContext = OpenCL::MakeTwoQueueContext(OpenCL::GetDeviceList(),Queue::InOrderWithProfiling);
-	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024);
+	boost::shared_ptr<clMemory<float,Auto>> GPUBuffer = GPUContext.CreateBuffer<float,Auto>(1024,1);
 	
 	const char* TestSource = "__kernel void clTest(__global float* Input, int width, int height, float value) \n"
 "{		\n"
@@ -224,8 +224,8 @@ BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 {
 	clContext GPUContext = OpenCL::MakeContext(OpenCL::GetDeviceList(),Queue::InOrder,Device::GPU);
 
-	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
-	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024*1024);
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024,1024);
+	clMemory<std::complex<float>,Auto>::Ptr GPUBuffer2 = GPUContext.CreateBuffer<std::complex<float>,Auto>(1024,1024);
 
 	std::vector<std::complex<float>> InitialData = std::vector<std::complex<float>>(1024*1024,1.0f);
 	GPUBuffer->Write(InitialData);
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(FourierTransformWorks)
 	GPUKernel(GPUBuffer,GPUBuffer2,Direction::Forwards);
 
 	// Value of first element should be sqrt(1024*1024)*1 = 1024...
-	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->GetLocal()[0]);
+	BOOST_REQUIRE_EQUAL(std::complex<float>(1024,0),GPUBuffer2->Get(0));
 
 }
 

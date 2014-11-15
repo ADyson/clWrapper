@@ -65,18 +65,29 @@ public:
 		MemList.remove(rec);
 	}
 
-	template<class T,template <class> class AutoPolicy> boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t size)
+	// Need to add functions that take sizes of all the different dimensions
+	template<class T,template <class> class AutoPolicy> boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t sizex, enum MemoryFlags eMemoryFlag = MemoryFlags::ReadWrite)
 	{
-		MemoryRecord* rec = new MemoryRecord(size*sizeof(T));
-		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,size,clCreateBuffer(Context, MemoryFlags::ReadWrite, size*sizeof(T), 0, &Status),rec));
+		MemoryRecord* rec = new MemoryRecord(sizex*sizeof(T));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,sizex,clCreateBuffer(Context, eMemoryFlag, sizex*sizeof(T), 0, &Status),rec));
 		MemList.push_back(rec);
 		return Mem;
 	};
 
-	template<class T,template <class> class AutoPolicy > boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t size, enum MemoryFlags flags)
+	// Need to add functions that take sizes of all the different dimensions
+	template<class T,template <class> class AutoPolicy> boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t sizex, size_t sizey, enum MemoryFlags eMemoryFlag = MemoryFlags::ReadWrite)
 	{
-		MemoryRecord* rec = new MemoryRecord(size*sizeof(T));
-		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,size,clCreateBuffer(Context, flags, size*sizeof(T), 0, &Status),rec));
+		MemoryRecord* rec = new MemoryRecord(sizex*sizey*sizeof(T));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,sizex,sizey,clCreateBuffer(Context, eMemoryFlag, sizex*sizey*sizeof(T), 0, &Status),rec));
+		MemList.push_back(rec);
+		return Mem;
+	};
+
+	// Need to add functions that take sizes of all the different dimensions
+	template<class T,template <class> class AutoPolicy> boost::shared_ptr<clMemory<T,AutoPolicy>> CreateBuffer(size_t sizex, size_t sizey, size_t sizez, enum MemoryFlags eMemoryFlag = MemoryFlags::ReadWrite)
+	{
+		MemoryRecord* rec = new MemoryRecord(sizex*sizey*sizez*sizeof(T));
+		boost::shared_ptr<clMemory<T,AutoPolicy>> Mem( new clMemory<T,AutoPolicy>(this,sizex,sizey,sizez,clCreateBuffer(Context, eMemoryFlag, sizex*sizey*sizez*sizeof(T), 0, &Status),rec));
 		MemList.push_back(rec);
 		return Mem;
 	};
